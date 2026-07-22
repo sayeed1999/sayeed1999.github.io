@@ -1,17 +1,59 @@
-# Sayeed Rahman
+# Md. Sayeed Rahman
 
-Developer building simple and useful mobile applications.
+Backend Engineer | Software Developer | Mobile App Builder
 
-## Apps
+I build reliable software systems and practical applications that solve
+real-world problems.
+
+Currently focused on backend engineering, mobile applications, and
+building products from idea to deployment.
+
+## About Me
+
+- Backend Engineer with experience building scalable web services
+- Passionate about clean architecture, system design, and developer tools
+- Building privacy-focused applications with a focus on user ownership of data
+- Interested in software engineering practices, AI-assisted development,
+  and product building
+
+## Projects
 
 ### Amar Hishab
 
-A personal finance tracker for managing:
+A privacy-focused personal finance management application.
 
-- Expenses
-- Savings
-- Investments
-- Loans
+Features:
 
-[View Amar Hishab](apps/amar-hishab/README.md)
-[Privacy Policy](apps/amar-hishab/PRIVACY_POLICY.md)
+- Expense tracking
+- Savings management
+- Investment tracking
+- Loan management
+- Bangla and English support
+- Offline-first architecture
+
+Privacy is a core principle of Amar Hishab:
+
+- User financial data stays on the user's device
+- No personal financial data is collected by the developer
+- Optional backup uses the user's own Google Drive account
+
+View Project:
+
+[Amar Hishab](apps/amar-hishab/)
+
+
+## Connect
+
+LinkedIn:
+
+[linkedin.com/in/mdsayeedrahman1999](https://www.linkedin.com/in/mdsayeedrahman1999/)
+
+GitHub:
+
+[github.com/sayeed1999](https://github.com/sayeed1999)
+
+
+## Contact
+
+For collaboration, software engineering discussions, or product ideas,
+feel free to connect with me.
