@@ -1,22 +1,12 @@
 :root {
-  --bg: #fafafa;
-  --surface: #ffffff;
-  --ink: #18181b;
-  --muted: #5b5b66;
-  --line: #e6e6ea;
-  --accent: #4f46e5;
-  --accent-soft: #eef0ff;
+  --bg: #f5f4ee;
+  --surface: #faf9f5;
+  --ink: #29261f;
+  --muted: #6b665a;
+  --line: #e3dfd2;
+  --accent: #c15f3c;
+  --accent-soft: #ece8da;
   --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-[data-theme="dark"] {
-  --bg: #0e0e11;
-  --surface: #16161a;
-  --ink: #f4f4f5;
-  --muted: #a0a0ab;
-  --line: #26262c;
-  --accent: #8b93ff;
-  --accent-soft: #1b1c2e;
 }
 
 * { box-sizing: border-box; }
@@ -68,24 +58,6 @@ nav a {
 }
 nav a:hover { color: var(--ink); }
 nav a.active { color: var(--ink); background: var(--accent-soft); }
-
-.theme-btn {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-  cursor: pointer;
-}
-.theme-btn:hover { border-color: var(--muted); }
-.theme-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.icon-sun { display: none; }
-[data-theme="dark"] .icon-sun { display: block; }
-[data-theme="dark"] .icon-moon { display: none; }
 
 /* Hero */
 .hero { padding: 96px 0 72px; }
