@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Binary search, step by step · Md. Sayeed Rahman</title>
+  <meta name="description" content="An interactive walkthrough of binary search.">
+  <link rel="stylesheet" href="../../styles.css">
+  <style>
+    /* Post-specific styles live here so each article is self-contained */
+    .cells { display: flex; flex-wrap: wrap; gap: 4px; margin: 20px 0; }
+    .cell { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 0.8rem; color: var(--muted); transition: background .2s, opacity .2s; }
+    .cell.out { opacity: .25; }
+    .cell.mid { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .cell.found { background: var(--trust); color: #fff; border-color: var(--trust); }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .controls input { width: 80px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font: inherit; }
+    .controls .btn { cursor: pointer; font-family: inherit; }
+    #msg { min-height: 1.6em; color: var(--ink); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow"><a href="../index.html">← Blog</a></p>
+    <h1>Binary search, step by step</h1>
+    <p class="meta">Algorithms · Interactive</p>
+
+    <p>Given a sorted list, look at the middle item. If it's too big, discard the right half; too small, discard the left half. Repeat. Each step halves the search space, so 16 items take at most 5 steps.</p>
+
+    <div class="controls">
+      <label for="target">Target</label>
+      <input id="target" type="number" min="1" max="32" value="23">
+      <button class="btn btn-primary" id="step" type="button">Step</button>
+      <button class="btn" id="reset" type="button">Reset</button>
+    </div>
+    <div class="cells" id="cells" aria-live="polite"></div>
+    <p id="msg"></p>
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    var arr = [];
+    for (var i = 1; i <= 16; i++) arr.push(i * 2); // 2, 4, ... 32
+    var lo, hi, mid, done, steps;
+    var cellsEl = document.getElementById("cells"), msg = document.getElementById("msg");
+
+    function render() {
+      cellsEl.innerHTML = "";
+      arr.forEach(function (v, i) {
+        var c = document.createElement("div");
+        c.className = "cell" + (i < lo || i > hi ? " out" : "") + (i === mid ? (done === "found" ? " found" : " mid") : "");
+        c.textContent = v;
+        cellsEl.appendChild(c);
+      });
+    }
+    function reset() {
+      lo = 0; hi = arr.length - 1; mid = -1; done = null; steps = 0;
+      msg.textContent = "Press Step to begin.";
+      render();
+    }
+    function step() {
+      if (done) return;
+      var t = Number(document.getElementById("target").value);
+      if (lo > hi) { done = "missing"; msg.textContent = t + " is not in the list (" + steps + " steps)."; render(); return; }
+      mid = Math.floor((lo + hi) / 2); steps++;
+      if (arr[mid] === t) { done = "found"; msg.textContent = "Found " + t + " at index " + mid + " in " + steps + " steps."; }
+      else if (arr[mid] < t) { msg.textContent = arr[mid] + " < " + t + ": discard the left half."; lo = mid + 1; }
+      else { msg.textContent = arr[mid] + " > " + t + ": discard the right half."; hi = mid - 1; }
+      render();
+    }
+    document.getElementById("step").addEventListener("click", step);
+    document.getElementById("reset").addEventListener("click", reset);
+    document.getElementById("target").addEventListener("input", reset);
+    reset();
+  </script>
+</body>
+</html>

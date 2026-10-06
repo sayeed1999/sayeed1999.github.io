@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog · Md. Sayeed Rahman</title>
+  <meta name="description" content="Interactive articles for learning software engineering concepts visually.">
+  <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../index.html#about">About</a>
+        <a href="../index.html#apps">Apps</a>
+        <a href="../index.html#blog">Blog</a>
+        <a href="../index.html#content">Content</a>
+        <a href="../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow">Blog</p>
+    <h1>Interactive articles</h1>
+    <p class="meta">Learn by poking at it.</p>
+
+    <!-- Add a new post: copy the card below and point it at blog/<slug>/ -->
+    <div class="cards cards-full">
+      <a class="card project" href="binary-search/index.html">
+        <div>
+          <h3>Binary search, step by step</h3>
+          <p class="kind">Algorithms · Interactive</p>
+          <p>Pick a target and watch the search space halve on every step.</p>
+        </div>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
