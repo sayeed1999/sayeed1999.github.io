@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The TLS journey · Md. Sayeed Rahman</title>
+  <meta name="description" content="A visual, interactive tutorial on TLS: how a certificate is created and installed on a server, and what happens when a frontend calls a backend over HTTPS.">
+  <link rel="stylesheet" href="../../styles.css">
+  <style>
+    /* Post-specific styles live here so each article is self-contained */
+    .doc h2.sec { margin: 56px 0 14px; font-size: 1.5rem; letter-spacing: -0.02em; text-transform: none; color: var(--ink); font-weight: 700; }
+    .doc h3 { margin: 28px 0 8px; font-size: 1.05rem; }
+    .doc p, .doc li { color: var(--ink); }
+    .lvl { display: inline-block; margin-bottom: 6px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+    code { padding: 1px 6px; border-radius: 5px; background: var(--accent-soft); }
+    pre { margin: 12px 0; padding: 14px 16px; overflow-x: auto; border-radius: 10px; background: #26231d; color: #ece8da; line-height: 1.5; }
+    pre code { padding: 0; background: none; color: inherit; }
+    .box { margin: 18px 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .box.tip { border-color: var(--trust-line); background: var(--trust-soft); }
+    .box.warn { border-color: #e6c3b4; background: #fbefe9; }
+    .box p:last-child { margin-bottom: 0; }
+    .box > :first-child { margin-top: 0; }
+
+    /* promises */
+    .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+    .three div { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: .9rem; }
+    .three b { display: block; margin-bottom: 4px; }
+    .three span { font-size: 1.4rem; }
+
+    /* progress / stepper */
+    .phases { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 10px; }
+    .phase { padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; border: 1px solid var(--line); color: var(--muted); background: var(--surface); }
+    .phase.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .dots { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 14px; }
+    .dot { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font: inherit; font-size: .8rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+    .dot.done { background: var(--accent-soft); color: var(--ink); }
+    .dot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .stage { padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .stage h3 { margin: 0 0 6px; font-size: 1.25rem; letter-spacing: -.01em; }
+    .stage .why { margin: 0 0 14px; color: var(--muted); }
+    .nav { display: flex; justify-content: space-between; margin-top: 14px; }
+    .btn { cursor: pointer; font-family: inherit; }
+    .btn[disabled] { opacity: .4; cursor: default; }
+
+    /* diagram */
+    .diagram { margin: 14px 0; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px dashed var(--line); }
+    .actors { display: flex; justify-content: space-between; gap: 8px; }
+    .actor { flex: 1; text-align: center; padding: 8px 4px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: .8rem; font-weight: 700; }
+    .actor small { display: block; font-weight: 400; opacity: .75; }
+    .rows { margin-top: 10px; }
+    .row { position: relative; margin: 10px 0; padding: 0 10px; opacity: 0; animation: pop .45s forwards; }
+    @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .row .lab { display: block; text-align: center; font-size: .82rem; padding: 0 6px 2px; }
+    .row .line { position: relative; height: 2px; background: var(--muted); margin: 0 6px; }
+    .row.r .line::after, .row.l .line::before { content: ""; position: absolute; top: -4px; border: 5px solid transparent; }
+    .row.r .line::after { right: -2px; border-left: 8px solid var(--muted); border-right: 0; }
+    .row.l .line::before { left: -2px; border-right: 8px solid var(--muted); border-left: 0; }
+    .row.enc .line { background: var(--trust); height: 3px; }
+    .row.enc.r .line::after { border-left-color: var(--trust); }
+    .row.enc.l .line::before { border-right-color: var(--trust); }
+    .row.self { text-align: center; }
+    .row.self .lab { display: inline-block; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+    .row.self.good .lab { background: var(--trust-soft); border-color: var(--trust-line); }
+    .tag { display: inline-block; padding: 0 7px; border-radius: 6px; background: var(--accent-soft); font-size: .75rem; font-weight: 700; }
+    .tag.g { background: var(--trust-soft); color: var(--trust); }
+    .note { margin: 8px 0 0; font-size: .85rem; color: var(--muted); }
+
+    /* certificate card */
+    .cert { margin: 12px 0; border: 2px solid var(--ink); border-radius: 12px; background: var(--surface); font-size: .85rem; overflow: hidden; }
+    .cert .hd { padding: 8px 14px; background: var(--ink); color: var(--bg); font-weight: 700; }
+    .cert dl { margin: 0; padding: 10px 14px; display: grid; grid-template-columns: 130px 1fr; gap: 4px 10px; }
+    .cert dt { color: var(--muted); }
+    .cert dd { margin: 0; overflow-wrap: anywhere; }
+    .cert .sig { padding: 8px 14px; border-top: 1px dashed var(--line); background: var(--trust-soft); color: var(--trust); font-weight: 600; }
+
+    /* chain */
+    .chain { display: flex; flex-direction: column; align-items: stretch; gap: 0; margin: 12px 0; }
+    .link { padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: .88rem; }
+    .link b { display: block; }
+    .link.root { border-color: var(--trust); background: var(--trust-soft); }
+    .down { text-align: center; color: var(--muted); font-size: .78rem; padding: 3px 0; }
+
+    /* playground */
+    .play { margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .play h3 { margin: 0 0 4px; }
+    .ctl { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 10px 0; }
+    .ctl label { font-size: .88rem; color: var(--muted); }
+    .ctl input[type=range] { width: 130px; accent-color: var(--accent); }
+    .ctl select, .ctl input[type=text] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit; }
+    .ctl input[type=text] { width: min(100%, 320px); }
+    .dh { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dh > div { padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: .88rem; }
+    .dh .big { font-size: 1.4rem; font-weight: 700; }
+    .dh .pub { grid-column: 1 / -1; text-align: center; background: var(--accent-soft); }
+    .dh .shared { grid-column: 1 / -1; text-align: center; background: var(--trust-soft); border-color: var(--trust-line); }
+    .secret { color: var(--accent); font-weight: 700; }
+    .checks { list-style: none; margin: 12px 0; padding: 0; }
+    .checks li { display: flex; gap: 10px; padding: 8px 12px; margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); font-size: .9rem; }
+    .checks li.ok { border-color: var(--trust-line); background: var(--trust-soft); }
+    .checks li.bad { border-color: #e6c3b4; background: #fbefe9; }
+    .verdict { padding: 12px 14px; border-radius: 10px; font-weight: 600; }
+    .verdict.ok { background: var(--trust); color: #fff; }
+    .verdict.bad { background: #b3402a; color: #fff; }
+    .wire { font-family: ui-monospace, Menlo, monospace; font-size: .82rem; padding: 12px; border-radius: 10px; background: #26231d; color: #ece8da; overflow-wrap: anywhere; min-height: 3.2em; }
+    .wire.ok { color: #8fd6a4; }
+
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+
+    .quiz button { display: block; width: 100%; margin: 6px 0; padding: 10px 14px; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit; cursor: pointer; }
+    .quiz button.right { background: var(--trust-soft); border-color: var(--trust); }
+    .quiz button.wrong { background: #fbefe9; border-color: #b3402a; }
+    .quiz .q { margin-bottom: 22px; }
+    .quiz .fb { font-size: .88rem; color: var(--muted); min-height: 1.4em; }
+
+    @media (max-width: 560px) { .three { grid-template-columns: 1fr; } .dh { grid-template-columns: 1fr; } .cert dl { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { .row { animation: none; opacity: 1; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow"><a href="../index.html">← Blog</a></p>
+    <h1>The TLS journey</h1>
+    <p class="meta">Networking · Security · Interactive · ~20 min, noob to hero</p>
+
+    <p>You type <code>https://</code> a hundred times a day. A tiny padlock appears and you move on. This tutorial opens the padlock. We'll follow one certificate from birth (a key pair on a server), through a Certificate Authority, onto the server, and then watch a frontend use it to talk to a backend safely.</p>
+
+    <div class="box tip">
+      <p><b>The whole thing in a real-world story.</b> A server wants to prove "I really am api.example.com". So it gets an <b>ID card</b> (a <i>certificate</i>) from an <b>ID office</b> (a <i>Certificate Authority</i>, or CA). The office checks the server really owns that domain, then stamps the card with a stamp nobody else can fake. Your browser is a <b>guard</b> who already knows what the trusted offices' stamps look like. When you visit, the server shows its ID card, the guard checks the stamp, and the two of you agree on a secret code word. From then on, everything is whispered in that code. That's it. The rest of this page is the details.</p>
+    </div>
+
+    <h3>Words in plain English</h3>
+    <table>
+      <tr><th>You'll see</th><th>It just means</th></tr>
+      <tr><td>Certificate (cert)</td><td>A digital ID card for a website: its name, its public key, who vouched for it, and until when.</td></tr>
+      <tr><td>CA (Certificate Authority)</td><td>A company that issues ID cards after checking you own the domain. Let's Encrypt is a free one.</td></tr>
+      <tr><td>Public key / private key</td><td>Two linked keys. The public one is a padlock you can hand out freely. The private one is the only key that opens it, and you never share it.</td></tr>
+      <tr><td>Signature</td><td>A tamper-proof stamp made with a private key. Anyone can check it with the matching public key.</td></tr>
+      <tr><td>Handshake</td><td>The short chat at the start of a connection where both sides agree on how to talk securely.</td></tr>
+      <tr><td>Trust store</td><td>The list of CAs your computer or browser already believes. It ships with your OS.</td></tr>
+    </table>
+
+    <!-- ===================== LEVEL 1 ===================== -->
+    <h2 class="sec"><span class="lvl">Level 1 · Noob</span><br>The problem TLS solves</h2>
+    <p>Your browser and a server talk through many strangers: Wi‑Fi, your ISP, a dozen routers. Plain HTTP is a postcard: anyone handling it can read or rewrite it. TLS (Transport Layer Security) makes three promises:</p>
+    <div class="three">
+      <div><span>🕶️</span><b>Confidentiality</b>Nobody on the wire can read the data.</div>
+      <div><span>🧾</span><b>Integrity</b>Nobody can change it without being detected.</div>
+      <div><span>🪪</span><b>Authenticity</b>You're really talking to <i>that</i> server, not an impostor.</div>
+    </div>
+    <p>Two tools deliver these promises. Learn them and the rest is just choreography.</p>
+
+    <h3>Tool 1: the key pair (asymmetric crypto)</h3>
+    <p>A key pair is two mathematically linked keys. The <b>public key</b> is shared with everyone. The <b>private key</b> never leaves its owner. Two things you can do with them:</p>
+    <table>
+      <tr><th>Operation</th><th>Use</th><th>Who can do it</th></tr>
+      <tr><td><b>Sign</b> with private key</td><td>Prove "I made this"</td><td>Anyone can <i>verify</i> with the public key; only the owner can <i>sign</i>.</td></tr>
+      <tr><td><b>Encrypt</b> with public key</td><td>Send a secret to the owner</td><td>Anyone can encrypt; only the owner can decrypt.</td></tr>
+    </table>
+    <p>Signing is the star of this story: it's how a certificate becomes unforgeable. Asymmetric math is slow, though, so TLS uses it only for the introduction.</p>
+
+    <h3>Tool 2: the session key (symmetric crypto)</h3>
+    <p>One shared secret key that both sides use to lock and unlock data. It's super fast (AES / ChaCha20), but both parties must somehow already <i>have</i> the same key. That's the classic chicken-and-egg problem, and the handshake exists to solve it.</p>
+    <div class="box tip"><p><b>The whole of TLS in one sentence:</b> use slow asymmetric crypto and a trusted certificate to prove who the server is and agree on a fresh secret, then use that secret with fast symmetric crypto for everything else.</p></div>
+
+    <!-- ===================== JOURNEY ===================== -->
+    <h2 class="sec"><span class="lvl">Level 2 · Apprentice</span><br>The journey in 11 steps</h2>
+    <p>Click through. Part A happens once, when you set up a server. Part B is the one-time trust that's baked into your device. Parts C and D happen on every connection.</p>
+
+    <div class="phases" id="phases"></div>
+    <div class="dots" id="dots" role="tablist" aria-label="Steps"></div>
+    <div class="stage" id="stage" aria-live="polite"></div>
+    <div class="nav">
+      <button class="btn" id="prev" type="button">← Back</button>
+      <button class="btn btn-primary" id="next" type="button">Next →</button>
+    </div>
+
+    <!-- ===================== LEVEL 3 ===================== -->
+    <h2 class="sec"><span class="lvl">Level 3 · Pro</span><br>Play with the three trickiest ideas</h2>
+
+    <div class="play" id="dhPlay">
+      <h3>① Agreeing on a secret in public (Diffie‑Hellman)</h3>
+      <p>Step 10 sounds like magic: two strangers shout numbers across a room and end up with the same secret. Try it with tiny numbers. Real TLS uses elliptic curves and 256‑bit numbers, but the idea is identical.</p>
+      <p class="note">Public and agreed in advance: prime <code>p = 23</code>, base <code>g = 5</code>. Everything is "mod 23".</p>
+      <div class="ctl">
+        <label>Client's secret <b class="secret" id="aV"></b> <input type="range" id="aS" min="2" max="21" value="6"></label>
+        <label>Server's secret <b class="secret" id="bV"></b> <input type="range" id="bS" min="2" max="21" value="15"></label>
+      </div>
+      <div class="dh" id="dhOut"></div>
+    </div>
+
+    <div class="play" id="certPlay">
+      <h3>② Be the browser: should I trust this certificate?</h3>
+      <p>Pick a server's situation and see which checks your browser runs and how it reacts.</p>
+      <div class="ctl">
+        <label for="scen">Scenario</label>
+        <select id="scen"></select>
+      </div>
+      <ul class="checks" id="checks"></ul>
+      <div class="verdict" id="verdict"></div>
+    </div>
+
+    <div class="play" id="wirePlay">
+      <h3>③ What does a snooper see?</h3>
+      <p>Type a message the frontend sends to the backend, then compare what someone on the Wi‑Fi captures.</p>
+      <div class="ctl"><input type="text" id="msgIn" value="POST /login  password=hunter2" aria-label="Message"></div>
+      <p class="note"><b>HTTP</b> (no TLS)</p>
+      <div class="wire" id="wHttp"></div>
+      <p class="note"><b>HTTPS</b> (TLS 1.3, the same bytes after encryption)</p>
+      <div class="wire ok" id="wTls"></div>
+      <p class="note">The ciphertext above is a visual stand‑in, not real AES, but the real thing looks just as random, and changes completely if you alter a single character.</p>
+    </div>
+
+    <!-- ===================== LEVEL 4 ===================== -->
+    <h2 class="sec"><span class="lvl">Level 4 · Hero</span><br>Do it yourself</h2>
+
+    <h3>Make your own CA and certificate locally</h3>
+    <p>You can replay the entire story on your laptop. This is exactly what tools like <code>mkcert</code> do.</p>
+<pre><code># 1. Be a Certificate Authority: make a root key + self-signed root cert
+openssl genrsa -out ca.key 4096
+openssl req -x509 -new -key ca.key -days 3650 -subj "/CN=My Toy Root CA" -out ca.crt
+
+# 2. Be the server: make a private key + a CSR for api.local
+openssl ecparam -genkey -name prime256v1 -noout -out server.key
+openssl req -new -key server.key -subj "/CN=api.local" \
+  -addext "subjectAltName=DNS:api.local" -out server.csr
+
+# 3. Be the CA again: sign the CSR
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+  -days 90 -copy_extensions copy -out server.crt
+
+# 4. Look inside
+openssl x509 -in server.crt -noout -text | less
+
+# 5. Serve it and talk to it (add "127.0.0.1 api.local" to /etc/hosts)
+openssl s_server -accept 8443 -cert server.crt -key server.key -www &amp;
+curl --cacert ca.crt https://api.local:8443/     # works: you trust your CA
+curl https://api.local:8443/                       # fails: nobody else does</code></pre>
+    <p>The last two lines are the whole lesson: the same certificate is valid or invalid depending purely on whether the client's trust store contains the issuer.</p>
+
+    <h3>Install it on a real server</h3>
+<pre><code># Let's Encrypt does steps 1-5 of the journey for you:
+sudo certbot --nginx -d api.example.com
+
+# What it ends up wiring into nginx:
+server {
+  listen 443 ssl http2;
+  server_name api.example.com;
+  ssl_certificate     /etc/letsencrypt/live/api.example.com/fullchain.pem;  # your cert + the middle CA cert
+  ssl_certificate_key /etc/letsencrypt/live/api.example.com/privkey.pem;    # never share this
+  ssl_protocols       TLSv1.2 TLSv1.3;
+}</code></pre>
+    <div class="box warn"><p><b>Common gotcha:</b> serve the <i>fullchain</i> file (your cert <b>plus</b> the middle CA cert), not just your own cert. Browsers often have the middle cert already and hide the mistake; <code>curl</code> and mobile apps don't, and fail with "unable to get local issuer certificate".</p></div>
+
+    <h3>Inspect a live handshake</h3>
+<pre><code>openssl s_client -connect example.com:443 -servername example.com -tls1_3 &lt;/dev/null
+curl -v https://example.com 2&gt;&amp;1 | grep -E "SSL|TLS|subject|issuer|expire"</code></pre>
+    <p>Or open DevTools → Security (Chrome) to see the protocol, cipher and chain for the current page.</p>
+
+    <h3>TLS 1.3 vs 1.2 and other hero details</h3>
+    <ul>
+      <li><b>Fast.</b> TLS 1.3 starts the secret-agreement in the very first message, so the handshake needs just one back-and-forth instead of two.</li>
+      <li><b>Old recordings stay safe ("forward secrecy").</b> The secret for each connection is made from throwaway numbers that are deleted afterwards. So even if someone steals your server's private key next year, they can't unlock traffic they recorded today. The private key only <i>signs</i>; it never protects the data itself.</li>
+      <li><b>Which site do you want?</b> One server can host many sites. The first message includes the hostname you want (called SNI), so the server picks the right certificate.</li>
+      <li><b>Which HTTP version?</b> That same first message also agrees on HTTP/2 vs HTTP/1.1 (called ALPN).</li>
+      <li><b>Cancelling a stolen cert ("revocation").</b> A CA can cancel a cert, but browsers don't always check. So certs are made short-lived (Let's Encrypt: 90 days) and auto-renewed.</li>
+      <li><b>Two-way ID check (mTLS).</b> The server can also demand an ID card from the client. Common between internal services.</li>
+      <li><b>Public logbook.</b> CAs publish every cert they issue to public logs, so if someone gets a fake cert for your domain, you can spot it.</li>
+    </ul>
+
+    <h3>Frontend → backend: where TLS actually lives</h3>
+    <p>When your React app does <code>fetch("https://api.example.com/users")</code>, <b>you write no TLS code</b>. The browser's network stack performs steps 7–11 before the first byte of your request is sent; the server (or a reverse proxy / load balancer in front of it) terminates TLS and hands plain HTTP to your app code, usually over a private network.</p>
+    <div class="diagram">
+      <div class="actors"><div class="actor">Browser<small>fetch()</small></div><div class="actor">Load balancer / nginx<small>TLS terminates here</small></div><div class="actor">App server<small>plain HTTP, private net</small></div></div>
+      <div class="rows">
+        <div class="row r enc"><span class="lab">HTTPS 🔒 over the public internet</span><div class="line"></div></div>
+        <div class="row r"><span class="lab">HTTP inside your VPC (or re-encrypt with mTLS)</span><div class="line" style="margin-left:34%"></div></div>
+      </div>
+    </div>
+    <p>Related things you'll meet: <b>mixed content</b> (an HTTPS page can't call an <code>http://</code> API), <b>CORS</b> (unrelated to TLS, it's about which <i>origins</i> may read responses), and <b>HSTS</b> (a header telling browsers "never use plain HTTP for this site again").</p>
+
+    <h3>Debugging cheat‑sheet</h3>
+    <table>
+      <tr><th>Error</th><th>Usual cause</th></tr>
+      <tr><td><code>CERT_DATE_INVALID</code> / expired</td><td>Renewal failed; or the <i>client's</i> clock is wrong.</td></tr>
+      <tr><td><code>ERR_CERT_COMMON_NAME_INVALID</code></td><td>The site name you typed isn't in the cert's list of allowed names (wrong cert served, or you used the IP address).</td></tr>
+      <tr><td><code>ERR_CERT_AUTHORITY_INVALID</code></td><td>Self‑signed cert, a private CA your device doesn't know, or the server forgot to send the middle CA cert.</td></tr>
+      <tr><td><code>SSL_ERROR_NO_CYPHER_OVERLAP</code></td><td>Client and server share no TLS version or cipher.</td></tr>
+      <tr><td>Works in Chrome, fails in curl / Java / Android</td><td>The server forgot to send the middle CA cert (Chrome quietly fills the gap; curl doesn't).</td></tr>
+    </table>
+
+    <h3>Check yourself</h3>
+    <div class="quiz" id="quiz"></div>
+
+    <h2 class="sec">The map to keep</h2>
+    <ol>
+      <li>The server makes a key pair; the <b>private key stays put</b>.</li>
+      <li>A CA verifies the domain, then <b>signs</b> the public key + name into a certificate.</li>
+      <li>Your device ships with a list of <b>roots it trusts</b>; trust flows down the chain.</li>
+      <li>On connect, the server shows its cert and <b>proves it owns the private key</b> by signing the handshake.</li>
+      <li>Both sides derive a <b>fresh shared secret</b> that never crossed the wire.</li>
+      <li>Everything after that is <b>fast symmetric encryption</b> with tamper detection.</li>
+    </ol>
+    <p>That's TLS. Everything else, from HTTP/3 to mTLS to service meshes, is a variation on this one idea.</p>
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    /* ---------- helpers to draw sequence diagrams ---------- */
+    function actors(list) {
+      return '<div class="actors">' + list.map(function (a) {
+        return '<div class="actor">' + a[0] + (a[1] ? '<small>' + a[1] + '</small>' : '') + '</div>';
+      }).join("") + '</div>';
+    }
+    function rows(items) {
+      // item: [dir 'r'|'l'|'self', label, opts]
+      return '<div class="rows">' + items.map(function (it, i) {
+        var cls = "row " + it[0] + (it[2] ? " " + it[2] : "");
+        var style = ' style="animation-delay:' + (i * 0.35) + 's"';
+        if (it[0] === "self") return '<div class="' + cls + '"' + style + '><span class="lab">' + it[1] + '</span></div>';
+        return '<div class="' + cls + '"' + style + '><span class="lab">' + it[1] + '</span><div class="line"></div></div>';
+      }).join("") + '</div>';
+    }
+    function diagram(a, r, note) {
+      return '<div class="diagram">' + actors(a) + rows(r) + '</div>' + (note ? '<p class="note">' + note + '</p>' : "");
+    }
+
+    var SERVER = ["Server", "api.example.com"], CA = ["Certificate Authority", "e.g. Let's Encrypt"], BROWSER = ["Browser", "frontend"];
+
+    var certCard = '<div class="cert"><div class="hd">📜 Certificate for api.example.com</div><dl>' +
+      '<dt>Subject</dt><dd>CN=api.example.com</dd>' +
+      '<dt>Allowed names</dt><dd>DNS:api.example.com</dd>' +
+      '<dt>Public key</dt><dd>ECDSA P‑256 · 04:a1:9f:…</dd>' +
+      '<dt>Issuer</dt><dd>Let\'s Encrypt "R11" (a middle CA)</dd>' +
+      '<dt>Valid</dt><dd>2026‑10‑06 → 2027‑01‑04</dd>' +
+      '<dt>Key usage</dt><dd>Can be used to identify a web server</dd>' +
+      '</dl><div class="sig">✍️ Signed by the issuer\'s private key</div></div>';
+
+    /* ---------- the 11 steps ---------- */
+    var PHASES = ["A · Get a certificate", "B · Trust", "C · Handshake", "D · Talk"];
+    var STEPS = [
+      { p: 0, t: "Server makes a key pair",
+        why: "Everything starts with a private key that only this server will ever know.",
+        html: function () {
+          return '<div class="diagram">' + actors([SERVER]) + rows([
+            ["self", "🔑 private key <span class=\"tag\">SECRET, never leaves</span>"],
+            ["self", "🗝️ public key <span class=\"tag g\">free to share</span>", "good"]
+          ]) + '</div><pre><code>openssl ecparam -genkey -name prime256v1 -noout -out server.key</code></pre>' +
+          '<p class="note">If the private key leaks, anyone can impersonate you. Treat it like a password: file mode 600, never in git, never in a Docker image.</p>';
+        } },
+      { p: 0, t: "Server fills out an application (CSR)",
+        why: "The server sends an application form to the <b>Certificate Authority (CA)</b>. The form is called a CSR (Certificate Signing Request). It says: \"Dear CA, here is my public key and my name. Please vouch for them.\"",
+        html: function () {
+          return '<div class="cert"><div class="hd">📝 CSR: the application form (sent to the CA)</div><dl>' +
+            '<dt>Name</dt><dd>api.example.com</dd><dt>Public key</dt><dd>04:a1:9f:…</dd></dl>' +
+            '<div class="sig">✍️ Signed with the server\'s PRIVATE key (proves it owns the matching public key)</div></div>' +
+            '<pre><code>openssl req -new -key server.key -subj "/CN=api.example.com" \\\n  -addext "subjectAltName=DNS:api.example.com" -out server.csr</code></pre>' +
+            '<p class="note">The CSR contains <b>no secrets</b>, only the public key. The private key is used just to sign the request.</p>';
+        } },
+      { p: 0, t: "CA checks you control the domain",
+        why: "A CA's whole job is to not be fooled. Before signing, it makes you prove the domain is yours.",
+        html: function () {
+          return diagram([SERVER, CA], [
+            ["r", "CSR: \"please certify api.example.com\""],
+            ["l", "Challenge: \"put this random code <code>x7Kq…</code> at a secret URL on your site\""],
+            ["self", "Server puts the code there (or in a DNS record)"],
+            ["l", "CA looks it up on the internet, finds it ✔ \"OK, you control this domain\""]
+          ], 'Tools like <code>certbot</code> do this dance automatically. Only someone who really controls the domain can pass, so nobody can get a cert for your site but you.');
+        } },
+      { p: 0, t: "CA signs → certificate is born",
+        why: "The CA glues your name and public key together and signs the bundle with its own private key.",
+        html: function () {
+          return certCard + '<p class="note">Anyone holding the CA\'s <b>public</b> key can verify this signature. If a single byte of the certificate changes, the signature breaks. A certificate is just "CA says: this key belongs to this name", made tamper-proof.</p>';
+        } },
+      { p: 0, t: "Install cert + key on the server",
+        why: "The server now holds the certificate (public) and the private key (secret). The web server is configured with both.",
+        html: function () {
+          return '<div class="chain">' +
+            '<div class="link"><b>fullchain.pem</b>your cert + the middle CA cert. Sent to every visitor.</div>' +
+            '<div class="link" style="margin-top:8px;border-color:#e6c3b4;background:#fbefe9"><b>privkey.pem</b>stays on the box. Used only to sign during handshakes.</div></div>' +
+            '<pre><code>ssl_certificate     /etc/ssl/fullchain.pem;\nssl_certificate_key /etc/ssl/privkey.pem;</code></pre>' +
+            '<p class="note">Certificates are public by design, so sending it to everybody is fine. What matters is that only the real server can <i>use</i> it, since only it has the private key.</p>';
+        } },
+      { p: 1, t: "Why your browser trusts the CA",
+        why: "The browser has never met your server. It trusts the certificate because of who stamped it. Here is the chain for a Let\'s Encrypt site:",
+        html: function () {
+          return '<div class="chain">' +
+            '<div class="link root"><b>🏛️ ISRG Root X1</b>The head office behind Let\'s Encrypt. <b>Already inside your browser / OS</b>, so it is trusted without asking anyone.</div><div class="down">▼ says: "I vouch for R11"</div>' +
+            '<div class="link"><b>🏢 Let\'s Encrypt R11</b>The branch that does the daily stamping. This is the "middle CA".</div><div class="down">▼ says: "I vouch for api.example.com"</div>' +
+            '<div class="link"><b>📜 api.example.com</b>Your server\'s certificate.</div></div>' +
+            '<p class="note">Your server sends its cert <b>and</b> R11\'s cert. The browser checks R11 stamped yours, then sees R11 was stamped by ISRG Root X1, which it already has. ✔ Trusted.</p>';
+        } },
+      { p: 2, t: "Browser says hello",
+        why: "Your frontend calls <code>fetch(\"https://api.example.com\")</code>. The browser opens the conversation by sending real, concrete values. Here is what is in the message (numbers are tiny on purpose so you can follow the math).",
+        html: function () {
+          return diagram([BROWSER, SERVER], [
+            ["self", "🤫 Browser picks a random private number and keeps it: <b>6</b>"],
+            ["self", "Browser computes its public number: 5<sup>6</sup> mod 23 = <b>8</b>"],
+            ["r", "<b>Hello</b><br><code>site I want: api.example.com</code><br><code>I can do: AES-256, ChaCha20</code><br><code>my public number: 8</code>"]
+          ], 'This first message is not encrypted yet, and that is fine: the private number 6 never leaves the browser, only 8 does. (Technical name: <code>ClientHello</code>. Step 10 explains why 8 is safe to share.)');
+        } },
+      { p: 2, t: "Server answers and shows its ID",
+        why: "The server does the same trick with its own private number, then proves who it is.",
+        html: function () {
+          return diagram([BROWSER, SERVER], [
+            ["self", "🤫 Server picks a private number and keeps it: <b>15</b>"],
+            ["self", "Server computes its public number: 5<sup>15</sup> mod 23 = <b>19</b>"],
+            ["l", "<b>Hello back</b><br><code>I chose: AES-256</code><br><code>my public number: 19</code>"],
+            ["self", "🔐 From here on, everything is encrypted (both sides can already compute the secret, see step 10)", "good"],
+            ["l", "<b>My ID card</b><br><code>api.example.com, valid until 2027-01-04</code><br><code>stamped by Let's Encrypt R11</code> + R11's own card", "enc"],
+            ["l", "<b>Proof it's mine</b><br><code>signature: 3045022100a9…f1</code><br>made with my PRIVATE key over everything said so far", "enc"],
+            ["l", "<b>Done</b><br><code>checksum of the whole chat: 7be1…</code>", "enc"]
+          ], 'A certificate alone proves nothing, because anyone can copy an ID card. The signature is like asking for a live selfie: only the real owner of the private key can produce it.');
+        } },
+      { p: 2, t: "Browser verifies the certificate",
+        why: "This is the authenticity promise being enforced. Try failing each check in the playground below.",
+        html: function () {
+          return '<ul class="checks">' +
+            '<li class="ok">✅ <span><b>Stamps:</b> your cert ← middle CA ← a head office I trust. Every stamp is genuine</span></li>' +
+            '<li class="ok">✅ <span><b>Name:</b> <code>api.example.com</code> is on the cert\'s list of allowed names</span></li>' +
+            '<li class="ok">✅ <span><b>Dates:</b> today is between the cert\'s start and end date</span></li>' +
+            '<li class="ok">✅ <span><b>Purpose:</b> this card is allowed to identify a web server</span></li>' +
+            '<li class="ok">✅ <span><b>Ownership:</b> the "proof it\'s mine" signature matches the public key on the card</span></li>' +
+            '<li class="ok">✅ <span><b>Not cancelled:</b> the CA hasn\'t withdrawn this card</span></li></ul>' +
+            '<p class="note">All pass → the padlock appears. Any fail → the red "Your connection is not private" page.</p>';
+        } },
+      { p: 2, t: "Both sides build the same secret",
+        why: "Each side now holds its own private number plus the other side's public number. Watch what happens when they combine them.",
+        html: function () {
+          return '<div class="dh">' +
+            '<div><b>Browser knows</b><br>private: <span class="secret">6</span><br>server\'s public: 19<br><br>19<sup>6</sup> mod 23 = <span class="big">2</span></div>' +
+            '<div><b>Server knows</b><br>private: <span class="secret">15</span><br>browser\'s public: 8<br><br>8<sup>15</sup> mod 23 = <span class="big">2</span></div>' +
+            '<div class="pub">👀 A spy on the wire saw only: 5, 23, <b>8</b>, <b>19</b></div>' +
+            '<div class="shared">🤝 Both got <b>2</b>. The spy can\'t get it without 6 or 15, and those never left the machines.<br><span class="note">Tiny numbers can be guessed; real ones are 256 bits long, which can\'t. Drag the sliders in playground ① below to try other numbers (6 and 15 are the defaults).</span></div></div>' +
+            '<p class="note">The shared secret is then turned into the real locking keys for the chat. All of these numbers are thrown away afterwards, so old recordings stay unreadable. This trick is called Diffie‑Hellman.</p>';
+        } },
+      { p: 3, t: "Encrypted HTTP flows",
+        why: "Handshake done in ~1 round trip. Now your actual request and response travel, locked with fast symmetric encryption.",
+        html: function () {
+          return diagram([BROWSER, SERVER], [
+            ["r", "🔒 <code>GET /users</code> + <code>Authorization: Bearer …</code>", "enc"],
+            ["l", "🔒 <code>200 OK</code> + JSON body", "enc"],
+            ["r", "🔒 more requests, multiplexed over the same connection (HTTP/2)", "enc"]
+          ], 'Every message is locked with the shared secret (using fast ciphers called AES or ChaCha20). The lock also adds a tiny tamper-seal, so if anyone changes even one byte, the other side notices and drops the connection. Private <i>and</i> unchanged. 🎉');
+        } }
+    ];
+
+    var cur = 0;
+    var stageEl = document.getElementById("stage"), dotsEl = document.getElementById("dots"), phasesEl = document.getElementById("phases");
+    var prevB = document.getElementById("prev"), nextB = document.getElementById("next");
+
+    function show(i) {
+      cur = i;
+      var s = STEPS[i];
+      phasesEl.innerHTML = PHASES.map(function (p, k) { return '<span class="phase' + (k === s.p ? " on" : "") + '">' + p + '</span>'; }).join("");
+      dotsEl.innerHTML = STEPS.map(function (_, k) {
+        return '<button class="dot' + (k === i ? " on" : k < i ? " done" : "") + '" data-i="' + k + '" aria-label="Step ' + (k + 1) + '">' + (k + 1) + '</button>';
+      }).join("");
+      stageEl.innerHTML = '<h3>' + (i + 1) + '. ' + s.t + '</h3><p class="why">' + s.why + '</p>' + s.html();
+      prevB.disabled = i === 0;
+      nextB.disabled = i === STEPS.length - 1;
+      nextB.textContent = i === STEPS.length - 2 ? "Last step →" : "Next →";
+    }
+    dotsEl.addEventListener("click", function (e) { var b = e.target.closest(".dot"); if (b) show(Number(b.dataset.i)); });
+    prevB.addEventListener("click", function () { if (cur > 0) show(cur - 1); });
+    nextB.addEventListener("click", function () { if (cur < STEPS.length - 1) show(cur + 1); });
+    show(0);
+
+    /* ---------- Playground 1: Diffie-Hellman ---------- */
+    var P = 23, G = 5;
+    function powmod(b, e, m) { var r = 1; b %= m; while (e > 0) { if (e & 1) r = (r * b) % m; b = (b * b) % m; e >>= 1; } return r; }
+    var aS = document.getElementById("aS"), bS = document.getElementById("bS");
+    function dh() {
+      var a = Number(aS.value), b = Number(bS.value);
+      var A = powmod(G, a, P), B = powmod(G, b, P);
+      var sa = powmod(B, a, P), sb = powmod(A, b, P);
+      document.getElementById("aV").textContent = a;
+      document.getElementById("bV").textContent = b;
+      document.getElementById("dhOut").innerHTML =
+        '<div><b>Client</b><br>secret a = <span class="secret">' + a + '</span><br>sends A = g<sup>a</sup> mod p = <span class="big">' + A + '</span></div>' +
+        '<div><b>Server</b><br>secret b = <span class="secret">' + b + '</span><br>sends B = g<sup>b</sup> mod p = <span class="big">' + B + '</span></div>' +
+        '<div class="pub">👀 The snooper sees only: p = 23, g = 5, A = <b>' + A + '</b>, B = <b>' + B + '</b></div>' +
+        '<div>Client computes B<sup>a</sup> mod p<br><span class="big">' + sa + '</span></div>' +
+        '<div>Server computes A<sup>b</sup> mod p<br><span class="big">' + sb + '</span></div>' +
+        '<div class="shared">' + (sa === sb ? '🤝 Same secret <b>' + sa + '</b> on both sides, and it never crossed the wire.' : 'mismatch?') + '<br><span class="note">With p this small a snooper can brute-force it. Real p has ~256 bits, so there are more possibilities than atoms in the universe.</span></div>';
+    }
+    aS.addEventListener("input", dh); bS.addEventListener("input", dh); dh();
+
+    /* ---------- Playground 2: cert checks ---------- */
+    var CHECKS = ["Signature chain leads to a trusted root", "Hostname matches the certificate", "Certificate is within its validity dates", "Server proves it owns the private key (not just a copy of the cert)", "Certificate is not revoked"];
+    var SCEN = [
+      { n: "Everything correct", f: [], v: "" },
+      { n: "Certificate expired (renewal cron died)", f: [2], v: "NET::ERR_CERT_DATE_INVALID" },
+      { n: "Cert is for www.example.com, you called api.example.com", f: [1], v: "NET::ERR_CERT_COMMON_NAME_INVALID" },
+      { n: "Self-signed certificate (no CA)", f: [0], v: "NET::ERR_CERT_AUTHORITY_INVALID" },
+      { n: "Attacker replays a copied certificate without the private key", f: [3], v: "ERR_SSL_PROTOCOL_ERROR (ownership proof failed)" },
+      { n: "Key leaked and certificate revoked", f: [4], v: "NET::ERR_CERT_REVOKED" },
+      { n: "Man-in-the-middle with a fake CA certificate", f: [0, 1], v: "NET::ERR_CERT_AUTHORITY_INVALID" }
+    ];
+    var scen = document.getElementById("scen");
+    scen.innerHTML = SCEN.map(function (s, i) { return '<option value="' + i + '">' + s.n + '</option>'; }).join("");
+    function checkCert() {
+      var s = SCEN[Number(scen.value)];
+      document.getElementById("checks").innerHTML = CHECKS.map(function (c, i) {
+        var bad = s.f.indexOf(i) >= 0;
+        return '<li class="' + (bad ? "bad" : "ok") + '">' + (bad ? "❌" : "✅") + ' <span>' + c + '</span></li>';
+      }).join("");
+      var v = document.getElementById("verdict");
+      v.className = "verdict " + (s.f.length ? "bad" : "ok");
+      v.textContent = s.f.length ? "⛔ Connection refused. Browser shows: " + s.v : "🔒 Trusted. Padlock shown, handshake continues.";
+    }
+    scen.addEventListener("change", checkCert); checkCert();
+
+    /* ---------- Playground 3: wire view ---------- */
+    var msgIn = document.getElementById("msgIn");
+    function fakeCipher(s) {
+      // deterministic scramble (FNV-style hash stream) purely for display, NOT real encryption
+      var h = 2166136261, out = "", hex = "0123456789abcdef";
+      for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+      for (var j = 0; j < Math.max(16, s.length + 16) * 2; j++) { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; h >>>= 0; out += hex[h & 15]; if (j % 2) out += " "; }
+      return out;
+    }
+    function wire() {
+      var s = msgIn.value;
+      document.getElementById("wHttp").textContent = s || " ";
+      document.getElementById("wTls").textContent = "17 03 03 " + fakeCipher(s);
+    }
+    msgIn.addEventListener("input", wire); wire();
+
+    /* ---------- Quiz ---------- */
+    var QUIZ = [
+      { q: "What does the CA actually sign?", o: ["The server's private key", "The server's public key + name (inside the certificate)", "The user's HTTP request"], a: 1, e: "Never the private key. The CA vouches for \"this public key belongs to this name\"." },
+      { q: "Someone copies your server's certificate onto their machine. Can they impersonate you?", o: ["Yes, the certificate is all you need", "No, they can't produce the ownership proof without your private key", "Only on public Wi‑Fi"], a: 1, e: "Certificates are public. Possession of the private key is the real secret." },
+      { q: "Why does TLS switch to symmetric encryption after the handshake?", o: ["It's far faster than asymmetric crypto", "Asymmetric keys expire", "HTTP requires it"], a: 0, e: "Asymmetric is for identity and agreeing on a secret; symmetric (AES/ChaCha) handles the bulk data." },
+      { q: "An attacker records all your traffic today and steals the server's private key next year. With TLS 1.3, can they decrypt it?", o: ["Yes, they have the key", "No: the secret for each session was made from throwaway numbers that no longer exist", "Only if it was HTTP/2"], a: 1, e: "The private key only signs; it never protects the data. Session secrets were thrown away afterwards." },
+      { q: "The site works in Chrome but curl says \"unable to get local issuer certificate\". Most likely cause?", o: ["curl doesn't support TLS 1.3", "The server isn't sending the middle CA's certificate", "The private key is too short"], a: 1, e: "Chrome can fill in the missing middle cert; curl needs the server to send the full chain." }
+    ];
+    var quizEl = document.getElementById("quiz");
+    quizEl.innerHTML = QUIZ.map(function (it, qi) {
+      return '<div class="q" data-q="' + qi + '"><b>' + (qi + 1) + '. ' + it.q + '</b>' +
+        it.o.map(function (o, oi) { return '<button type="button" data-o="' + oi + '">' + o + '</button>'; }).join("") +
+        '<div class="fb" aria-live="polite"></div></div>';
+    }).join("");
+    quizEl.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      var q = b.closest(".q"), it = QUIZ[Number(q.dataset.q)], oi = Number(b.dataset.o);
+      q.querySelectorAll("button").forEach(function (x) { x.classList.remove("right", "wrong"); });
+      b.classList.add(oi === it.a ? "right" : "wrong");
+      q.querySelector(".fb").textContent = oi === it.a ? "✅ " + it.e : "❌ Not quite, try again.";
+    });
+  </script>
+</body>
+</html>
