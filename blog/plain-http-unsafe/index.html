@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plain HTTP and why it's unsafe · Md. Sayeed Rahman</title>
+  <meta name="description" content="Play the person on the same Wi-Fi: read a password, change a payment, fake a bank. An interactive look at why plain HTTP is unsafe.">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../tutorial.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow"><a href="../index.html">← Blog</a></p>
+    <h1>Plain HTTP and why it's unsafe</h1>
+    <p class="meta">Networking · Part 2 of 4 · Interactive · ~10 min</p>
+
+    <p><span class="part">Networking series · Part 2 of 4</span></p>
+    <p>In <a href="../how-a-website-loads/index.html"><u>Part 1</u></a> we saw that a web request is plain text, handed across many machines you don't control. Now let's see what a stranger on that path can actually do. You'll play the stranger.</p>
+    <p>Imagine you're at a café, on its free Wi‑Fi, using <code>http://mybank.com</code> (plain HTTP, no <code>s</code>). Someone else is sitting on the same network with a laptop.</p>
+
+    <h2 class="sec">Attack 1: reading (eavesdropping)</h2>
+    <p>Here's a login form. Type anything and press Send. The right side shows what the person on the café Wi‑Fi sees.</p>
+    <div class="play">
+      <div class="two">
+        <div>
+          <h4>👤 You, in the browser</h4>
+          <div class="ctl" style="flex-direction:column;align-items:stretch">
+            <label>Username <input type="text" id="u" value="sayeed"></label>
+            <label>Password <input type="password" id="p" value="hunter2"></label>
+            <button class="btn btn-primary" type="button" id="send1">Log in</button>
+          </div>
+          <p class="note" id="sent1"></p>
+        </div>
+        <div>
+          <h4>🕵️ Stranger on the same Wi‑Fi</h4>
+          <div class="wire" id="snoop">(waiting for you to press Log in…)</div>
+        </div>
+      </div>
+    </div>
+    <p>No hacking skill needed. Free tools (Wireshark, tcpdump) show this on any network you share. Password, cookies, messages, all readable. Remember the <code>Cookie: session=…</code> line from Part 1? Steal it and you're logged in as that person, without ever knowing their password.</p>
+
+    <h2 class="sec">Attack 2: changing (tampering)</h2>
+    <p>Reading is bad. <b>Changing</b> is worse. You're sending a payment. Switch the stranger on, then press Send.</p>
+    <div class="play">
+      <div class="ctl">
+        <label><input type="checkbox" id="evil"> 🕵️ Stranger changes the message on the way</label>
+        <button class="btn btn-primary" type="button" id="send2">Send payment</button>
+      </div>
+      <div class="two">
+        <div>
+          <h4>📤 What you sent</h4>
+          <div class="wire" id="out2">POST /transfer
+to=alice
+amount=10</div>
+        </div>
+        <div>
+          <h4>🏦 What the bank received</h4>
+          <div class="wire" id="in2">(press Send payment)</div>
+        </div>
+      </div>
+      <p class="note" id="msg2"></p>
+    </div>
+    <p>Neither side can tell. Over plain HTTP nothing checks that the message arrived unchanged. This also happens to web pages: some networks inject ads or tracking scripts into pages you load over HTTP.</p>
+
+    <h2 class="sec">Attack 3: pretending (impersonating)</h2>
+    <p>A stranger can also set up a fake Wi‑Fi called "Cafe Free WiFi" and send you a copy of the bank's page. Two pages below look identical. Both claim to be <code>http://mybank.com</code>. <b>Which one is the real bank?</b></p>
+    <div class="play">
+      <div class="two">
+        <div>
+          <h4>Page A</h4>
+          <div class="box" style="margin:0"><b>🏦 MyBank</b><br><span class="note">http://mybank.com/login</span><br>Username ____<br>Password ____</div>
+          <button class="btn" type="button" data-pick="A" style="margin-top:8px">A is real</button>
+        </div>
+        <div>
+          <h4>Page B</h4>
+          <div class="box" style="margin:0"><b>🏦 MyBank</b><br><span class="note">http://mybank.com/login</span><br>Username ____<br>Password ____</div>
+          <button class="btn" type="button" data-pick="B" style="margin-top:8px">B is real</button>
+        </div>
+      </div>
+      <p class="note" id="pick" aria-live="polite"></p>
+    </div>
+    <p>You can't tell, and neither can your browser. Plain HTTP has no way to prove who is on the other end. (Browsers do label such pages <b>"Not secure"</b> in the address bar.)</p>
+
+    <h2 class="sec">Three problems, three promises</h2>
+    <p>Each attack breaks one promise. The fix for all three is HTTPS, which is HTTP wrapped in <b>TLS</b>.</p>
+    <table>
+      <tr><th>Attack</th><th>What breaks</th><th>What TLS promises</th></tr>
+      <tr><td>Reading</td><td>Privacy</td><td><b>Confidentiality:</b> strangers see only scrambled data.</td></tr>
+      <tr><td>Changing</td><td>Trust in the message</td><td><b>Integrity:</b> any change is detected.</td></tr>
+      <tr><td>Pretending</td><td>Knowing who you talk to</td><td><b>Authenticity:</b> the server proves its identity.</td></tr>
+    </table>
+    <div class="box tip"><p>To build those three promises we need a few ideas from cryptography: keys, locks and fingerprints. That's Part 3.</p></div>
+
+    <h2 class="sec">See it yourself (safely)</h2>
+    <p><code>neverssl.com</code> is a site made to stay on plain HTTP, handy for testing:</p>
+<pre><code>curl -v http://neverssl.com 2&gt;&amp;1 | head -20</code></pre>
+    <p>You'll see the whole request and response as readable text. Never type real passwords into HTTP sites, and be careful on public Wi‑Fi.</p>
+
+    <h2 class="sec">Check yourself</h2>
+    <div class="quiz" id="quiz"></div>
+
+    <h2 class="sec">Next</h2>
+    <div class="cards stack"><a class="card project" href="../encryption-basics/index.html">
+      <div><h3>Encryption basics: locks, keys and secrets</h3><p class="kind">Networking · Part 3 of 4 · Interactive</p><p>Scramble a message, meet public and private keys, and see how a signature is made.</p></div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a></div>
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+
+  <script src="../tutorial.js"></script>
+  <script>
+    function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+    /* ---------- Attack 1: eavesdropping ---------- */
+    document.getElementById("send1").addEventListener("click", function () {
+      var u = document.getElementById("u").value, p = document.getElementById("p").value;
+      document.getElementById("sent1").textContent = "Sent. Looks normal to you.";
+      document.getElementById("snoop").innerHTML =
+        "POST /login HTTP/1.1\nHost: mybank.com\nContent-Type: application/x-www-form-urlencoded\n\n" +
+        "username=" + esc(u) + "&amp;password=<span class=\"hl\">" + esc(p) + "</span>";
+    });
+
+    /* ---------- Attack 2: tampering ---------- */
+    var evil = document.getElementById("evil");
+    document.getElementById("send2").addEventListener("click", function () {
+      var got = evil.checked ? "POST /transfer\nto=<span class=\"hl\">mallory</span>\namount=<span class=\"hl\">1000</span>" : "POST /transfer\nto=alice\namount=10";
+      document.getElementById("in2").innerHTML = got;
+      document.getElementById("msg2").innerHTML = evil.checked
+        ? "<span class=\"bad\">The bank paid $1000 to Mallory.</span> It had no way to know the message was altered."
+        : "<span class=\"good\">Unchanged, because nobody interfered this time.</span> Now tick the box and try again.";
+    });
+
+    /* ---------- Attack 3: impersonating ---------- */
+    document.querySelectorAll("[data-pick]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.getElementById("pick").innerHTML = "You picked " + b.dataset.pick + ". <b>It was a coin flip.</b> They look identical, and the address says the same thing. With HTTP there is nothing that proves who is behind a page.";
+      });
+    });
+
+    quiz(document.getElementById("quiz"), [
+      { q: "You log in over plain HTTP at a café. What can a stranger on the same Wi‑Fi do?", o: ["Nothing, passwords are always hidden", "Read the password from the request", "Only see the website's name"], a: 1, e: "HTTP sends everything as readable text." },
+      { q: "Which attack changes the data while it is on its way?", o: ["Eavesdropping", "Tampering", "Port scanning"], a: 1, e: "Tampering alters the message in transit. Neither side notices without integrity checks." },
+      { q: "Why can't you tell a fake page from the real one over HTTP?", o: ["Fake pages are better designed", "HTTP has no way for a server to prove its identity", "Browsers hide the address"], a: 1, e: "That's the authenticity problem TLS solves with certificates (Part 4)." }
+    ]);
+  </script>
+</body>
+</html>

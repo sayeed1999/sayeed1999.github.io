@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Encryption basics: locks, keys and secrets · Md. Sayeed Rahman</title>
+  <meta name="description" content="Encryption, public and private keys, signatures and hashes explained with hands-on demos, no math background needed.">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../tutorial.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow"><a href="../index.html">← Blog</a></p>
+    <h1>Encryption basics: locks, keys and secrets</h1>
+    <p class="meta">Networking · Part 3 of 4 · Interactive · ~15 min</p>
+
+    <p><span class="part">Networking series · Part 3 of 4</span></p>
+    <p>In <a href="../plain-http-unsafe/index.html"><u>Part 2</u></a> we saw strangers can read, change and fake web traffic. To stop them, TLS uses four ideas from cryptography. You'll try each one here:</p>
+    <ol>
+      <li><b>Encryption with a shared key:</b> scramble data so only key holders can read it.</li>
+      <li><b>Public and private keys:</b> a lock anyone can close, but only one person can open.</li>
+      <li><b>Signatures:</b> a stamp only one person can make, which anyone can check.</li>
+      <li><b>Hashes:</b> a fingerprint of data that changes if the data changes.</li>
+    </ol>
+
+    <h2 class="sec">1. Encryption: scramble with a key</h2>
+    <p>Encryption turns a readable message (<b>plaintext</b>) into scrambled nonsense (<b>ciphertext</b>) using a <b>key</b>. Decryption reverses it, and needs the key.</p>
+    <p>Here is the oldest trick, the Caesar cipher: shift every letter forward by <i>key</i> places. With key 3, A becomes D, B becomes E. Try it.</p>
+    <div class="play">
+      <div class="ctl">
+        <label>Message <input type="text" id="cMsg" value="Meet at five"></label>
+        <label>Secret key <b class="secret" id="cKeyV"></b> <input type="range" id="cKey" min="1" max="25" value="3"></label>
+      </div>
+      <p class="note">Scrambled message (what the stranger sees):</p>
+      <div class="wire" id="cCipher"></div>
+      <div class="ctl">
+        <label>Key I try for unlocking <b class="secret" id="cTryV"></b> <input type="range" id="cTry" min="1" max="25" value="1"></label>
+      </div>
+      <div class="wire" id="cPlain"></div>
+      <p class="note" id="cNote"></p>
+      <button class="btn" type="button" id="cCrack">🔨 Crack it without the key</button>
+      <div class="wire" id="cCrackOut" style="display:none;margin-top:10px"></div>
+    </div>
+    <p>Same key to lock and unlock is called <b>symmetric encryption</b>. It's fast, which is why real systems (AES, ChaCha20) use it for all the bulk data.</p>
+    <p>Caesar is weak: only 25 keys, so a computer tries all in a blink (press the button). Real keys have 2<sup>256</sup> possibilities. That's more than the number of atoms in the universe, so guessing is hopeless.</p>
+
+    <div class="box warn"><p><b>The catch:</b> both sides need the <i>same</i> key. How do you give it to a stranger across the internet? If you send it, someone on the path copies it, and then they can read everything. Locks are easy. <b>Sharing the key safely is the hard part.</b></p></div>
+
+    <h2 class="sec">2. Public and private keys: the open padlock</h2>
+    <p>The trick that solves it: make a <b>pair</b> of keys that fit together.</p>
+    <ul>
+      <li><b>Public key:</b> like an open padlock. Hand copies to everyone. It can only <i>close</i> the lock.</li>
+      <li><b>Private key:</b> the only key that <i>opens</i> it. Never shared.</li>
+    </ul>
+    <p>To send Bella a secret, you snap <b>her public padlock</b> on it. A stranger can see the box and even own the same padlock, but can't open it. Only Bella's private key can.</p>
+    <p>The demo below uses real public-key math (RSA) with tiny numbers, so you can see it's just arithmetic. Pick a secret number to send:</p>
+
+    <div class="play">
+      <div class="ctl">
+        <label>Secret number <b class="secret" id="rM"></b> <input type="range" id="rMsg" min="2" max="3000" value="65"></label>
+      </div>
+      <div class="two">
+        <div><h4>📢 Public key (everyone has it)</h4><code>e = 17, n = 3233</code></div>
+        <div><h4>🔑 Private key (only Bella)</h4><code>d = 2753, n = 3233</code></div>
+      </div>
+      <div class="tabs">
+        <button class="btn btn-primary" type="button" id="tabLock">🔒 Lock and unlock</button>
+        <button class="btn" type="button" id="tabSign">✍️ Stamp and check</button>
+      </div>
+      <div id="rOut"></div>
+    </div>
+    <p class="note">Real keys use numbers hundreds of digits long. Working out the private key from the public one is practically impossible at that size.</p>
+
+    <h2 class="sec">3. Signatures: the stamp nobody can fake</h2>
+    <p>Public keys can run <b>in reverse</b>. If Bella locks something with her <b>private</b> key, anyone can open it with her <b>public</b> key. Only Bella could have made it. That is a <b>signature</b>: proof that a message came from the key's owner and wasn't changed.</p>
+    <p>Switch the demo above to <b>Stamp and check</b>. This is what a Certificate Authority does to a website's certificate in Part 4: it signs "this public key belongs to example.com" so that nobody can forge or edit it.</p>
+
+    <h2 class="sec">4. Hashes: a fingerprint for data</h2>
+    <p>A <b>hash function</b> turns any data into a short fixed-size fingerprint. Two key properties:</p>
+    <ul>
+      <li>The same input always gives the same fingerprint.</li>
+      <li>Change <i>anything</i>, even one letter, and the fingerprint changes completely. And you can't go backwards from the fingerprint to the data.</li>
+    </ul>
+    <p>This is real SHA-256, running in your browser. Edit the second box by one character:</p>
+    <div class="play">
+      <div class="ctl" style="flex-direction:column;align-items:stretch">
+        <label>Message A <input type="text" id="hA" value="Pay Alice $10" style="width:100%"></label>
+        <div class="wire ok" id="oA"></div>
+        <label>Message B <input type="text" id="hB" value="Pay Alice $11" style="width:100%"></label>
+        <div class="wire ok" id="oB"></div>
+      </div>
+      <p class="note" id="hNote"></p>
+    </div>
+    <p>In practice, signing a big document means hashing it first, then signing the small fingerprint. If anyone edits the document, the fingerprint no longer matches the signature.</p>
+
+    <h2 class="sec">How these fit together</h2>
+    <table>
+      <tr><th>Idea</th><th>Plain English</th><th>Speed</th><th>Used in TLS for</th></tr>
+      <tr><td>Shared key (symmetric)</td><td>One key locks and unlocks</td><td>Fast</td><td>Encrypting all the real data</td></tr>
+      <tr><td>Public / private keys</td><td>Open padlock + one key</td><td>Slow</td><td>Proving identity, agreeing on the shared key</td></tr>
+      <tr><td>Signature</td><td>Stamp made with the private key</td><td>Slow</td><td>Certificates: "this key belongs to this site"</td></tr>
+      <tr><td>Hash</td><td>Fingerprint of data</td><td>Very fast</td><td>Detecting any change</td></tr>
+    </table>
+    <div class="box tip"><p><b>The plan:</b> use the slow public-key tools once, at the start, to prove who the server is and to agree on a shared key. Then use the fast shared key for everything else. That's exactly the TLS handshake.</p></div>
+
+    <h2 class="sec">Check yourself</h2>
+    <div class="quiz" id="quiz"></div>
+
+    <h2 class="sec">Next</h2>
+    <div class="cards stack"><a class="card project" href="../tls-journey/index.html">
+      <div><h3>The TLS journey</h3><p class="kind">Networking · Part 4 of 4 · Interactive</p><p>From creating a certificate to an encrypted HTTPS connection, in 11 steps.</p></div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a></div>
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+
+  <script src="../tutorial.js"></script>
+  <script>
+    /* ---------- 1. Caesar cipher ---------- */
+    function caesar(text, k) {
+      return text.replace(/[a-z]/gi, function (ch) {
+        var base = ch <= "Z" ? 65 : 97;
+        return String.fromCharCode((ch.charCodeAt(0) - base + k + 26) % 26 + base);
+      });
+    }
+    var cMsg = document.getElementById("cMsg"), cKey = document.getElementById("cKey"), cTry = document.getElementById("cTry");
+    function caesarRender() {
+      var k = Number(cKey.value), t = Number(cTry.value), c = caesar(cMsg.value, k);
+      document.getElementById("cKeyV").textContent = k;
+      document.getElementById("cTryV").textContent = t;
+      document.getElementById("cCipher").textContent = c || " ";
+      var plain = caesar(c, -t);
+      document.getElementById("cPlain").textContent = plain || " ";
+      document.getElementById("cNote").innerHTML = t === k ? "<span class=\"good\">✅ Right key, the message is back.</span>" : "<span class=\"bad\">❌ Wrong key gives nonsense.</span> Slide until it reads correctly.";
+      document.getElementById("cCrackOut").style.display = "none";
+    }
+    [cMsg, cKey, cTry].forEach(function (el) { el.addEventListener("input", caesarRender); });
+    document.getElementById("cCrack").addEventListener("click", function () {
+      var c = caesar(cMsg.value, Number(cKey.value)), out = [];
+      for (var k = 1; k <= 25; k++) out.push("key " + (k < 10 ? " " : "") + k + ": " + caesar(c, -k));
+      var el = document.getElementById("cCrackOut");
+      el.textContent = out.join("\n") + "\n\nOnly 25 tries. Spot the readable line, that's the key.";
+      el.style.display = "block";
+    });
+    caesarRender();
+
+    /* ---------- 2 and 3. Toy RSA ---------- */
+    var N = 3233, E = 17, D = 2753;
+    function powmod(b, e, m) { var r = 1; b %= m; while (e > 0) { if (e & 1) r = (r * b) % m; b = (b * b) % m; e >>= 1; } return r; }
+    var rMsg = document.getElementById("rMsg"), rOut = document.getElementById("rOut"), mode = "lock";
+    function rsaRender() {
+      var m = Number(rMsg.value);
+      document.getElementById("rM").textContent = m;
+      var h;
+      if (mode === "lock") {
+        var c = powmod(m, E, N), back = powmod(c, D, N), wrong = powmod(c, E, N);
+        h = '<div class="two">' +
+          '<div><h4>1. You lock it (public key)</h4>' + m + '<sup>17</sup> mod 3233 = <span class="big">' + c + '</span><p class="note">This scrambled number crosses the internet. A stranger sees only ' + c + '.</p></div>' +
+          '<div><h4>2. Bella unlocks (private key)</h4>' + c + '<sup>2753</sup> mod 3233 = <span class="big good">' + back + '</span><p class="note">Her private key gives the secret back. ✅</p></div></div>' +
+          '<div class="two" style="margin-top:12px"><div><h4>😈 Stranger tries the public key</h4>' + c + '<sup>17</sup> mod 3233 = <span class="big bad">' + wrong + '</span><p class="note">Garbage. The public key can only lock, never unlock. ❌</p></div>' +
+          '<div><h4>Takeaway</h4><p class="note" style="margin:0">Everyone may lock. Only the private key owner can unlock. The key never had to be shared.</p></div></div>';
+      } else {
+        var s = powmod(m, D, N), ok = powmod(s, E, N), t = m + 1, bad = (ok === t);
+        h = '<div class="two">' +
+          '<div><h4>1. Bella signs (private key)</h4>' + m + '<sup>2753</sup> mod 3233 = <span class="big">' + s + '</span><p class="note">Signature <b>' + s + '</b> travels with the message <b>' + m + '</b>.</p></div>' +
+          '<div><h4>2. Anyone checks (public key)</h4>' + s + '<sup>17</sup> mod 3233 = <span class="big good">' + ok + '</span><p class="note">It equals the message ' + m + ', so only Bella\'s private key could have made it. ✅</p></div></div>' +
+          '<div class="two" style="margin-top:12px"><div><h4>😈 Stranger changes the message to ' + t + '</h4>Check says the signature stands for <span class="big bad">' + ok + '</span>, not ' + t + '.<p class="note">Mismatch, so the change is detected. ❌</p></div>' +
+          '<div><h4>Takeaway</h4><p class="note" style="margin:0">A stranger can\'t make a new valid signature without the private key, and can\'t edit the message without breaking the old one.</p></div></div>';
+      }
+      rOut.innerHTML = h;
+      document.getElementById("tabLock").className = "btn" + (mode === "lock" ? " btn-primary" : "");
+      document.getElementById("tabSign").className = "btn" + (mode === "sign" ? " btn-primary" : "");
+    }
+    rMsg.addEventListener("input", rsaRender);
+    document.getElementById("tabLock").addEventListener("click", function () { mode = "lock"; rsaRender(); });
+    document.getElementById("tabSign").addEventListener("click", function () { mode = "sign"; rsaRender(); });
+    rsaRender();
+
+    /* ---------- 4. SHA-256 ---------- */
+    function sha256(text) {
+      if (!window.crypto || !crypto.subtle) return Promise.resolve("(your browser blocks SHA-256 on this page)");
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
+        return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+      });
+    }
+    var hA = document.getElementById("hA"), hB = document.getElementById("hB");
+    function hashRender() {
+      Promise.all([sha256(hA.value), sha256(hB.value)]).then(function (r) {
+        document.getElementById("oA").textContent = r[0];
+        document.getElementById("oB").textContent = r[1];
+        document.getElementById("hNote").textContent = r[0] === r[1] ? "Same message, same fingerprint." : "Almost the same message, completely different fingerprint.";
+      });
+    }
+    hA.addEventListener("input", hashRender); hB.addEventListener("input", hashRender);
+    hashRender();
+
+    quiz(document.getElementById("quiz"), [
+      { q: "Anyone can lock with Bella's public key. Who can unlock?", o: ["Anyone who has the public key", "Only Bella, with her private key", "Nobody"], a: 1, e: "The public key only closes the lock. The private key opens it." },
+      { q: "Why does TLS use a fast shared key for the real data instead of public/private keys?", o: ["Shared keys are much faster", "Public keys can't encrypt text", "Shared keys are never stolen"], a: 0, e: "Public-key math is slow, so it's used only at the start." },
+      { q: "A signature is made with...", o: ["The public key", "The private key", "The hash of the public key only"], a: 1, e: "Only the owner can sign (private key). Anyone can check (public key)." },
+      { q: "You change one letter of a message. Its SHA-256 hash...", o: ["Changes slightly", "Stays the same", "Changes completely"], a: 2, e: "Any change gives a totally different fingerprint, so tampering is detectable." }
+    ]);
+  </script>
+</body>
+</html>

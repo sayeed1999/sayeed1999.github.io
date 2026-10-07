@@ -1,0 +1,78 @@
+/* Shared styles for the interactive tutorials (foundations series + TLS). Builds on ../styles.css */
+.doc h2.sec { margin: 52px 0 12px; font-size: 1.5rem; letter-spacing: -0.02em; text-transform: none; color: var(--ink); font-weight: 700; }
+.doc h3 { margin: 26px 0 8px; font-size: 1.05rem; }
+.doc p, .doc li { color: var(--ink); }
+.part { display: inline-block; margin-bottom: 6px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; }
+code { padding: 1px 6px; border-radius: 5px; background: var(--accent-soft); }
+pre { margin: 12px 0; padding: 14px 16px; overflow-x: auto; border-radius: 10px; background: #26231d; color: #ece8da; line-height: 1.5; }
+pre code { padding: 0; background: none; color: inherit; }
+.hl { color: #ff9b85; font-weight: 700; }
+.box { margin: 18px 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.box.tip { border-color: var(--trust-line); background: var(--trust-soft); }
+.box.warn { border-color: #e6c3b4; background: #fbefe9; }
+.box p:last-child { margin-bottom: 0; }
+.box > :first-child { margin-top: 0; }
+.note { margin: 8px 0 0; font-size: .85rem; color: var(--muted); }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .9rem; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+.btn { cursor: pointer; font-family: inherit; }
+.btn[disabled] { opacity: .4; cursor: default; }
+.chip { display: inline-block; margin: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: .85rem; }
+
+/* playgrounds */
+.play { margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.play h3 { margin: 0 0 4px; }
+.ctl { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 10px 0; }
+.ctl label { font-size: .88rem; color: var(--muted); }
+.ctl input[type=range] { width: 150px; accent-color: var(--accent); }
+.ctl select, .ctl input[type=text], .ctl input[type=password], .ctl input[type=number] { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit; }
+.ctl input[type=text], .ctl input[type=password] { width: min(100%, 220px); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.two > div { padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: .88rem; min-width: 0; }
+.two h4 { margin: 0 0 8px; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.wire { font-family: ui-monospace, Menlo, monospace; font-size: .8rem; padding: 12px; border-radius: 10px; background: #26231d; color: #ece8da; white-space: pre-wrap; overflow-wrap: anywhere; min-height: 3.2em; }
+.wire.ok { color: #8fd6a4; }
+.big { font-size: 1.3rem; font-weight: 700; }
+.secret { color: var(--accent); font-weight: 700; }
+.good { color: var(--trust); font-weight: 700; }
+.bad { color: #b3402a; font-weight: 700; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 12px; }
+
+/* stepper */
+.stage { padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.stage h3 { margin: 0 0 6px; font-size: 1.25rem; letter-spacing: -.01em; }
+.stage .why { margin: 0 0 14px; color: var(--muted); }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 14px; }
+.dot { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font: inherit; font-size: .8rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+.dot.done { background: var(--accent-soft); color: var(--ink); }
+.dot.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.nav2 { display: flex; justify-content: space-between; margin-top: 14px; }
+
+/* sequence diagram */
+.diagram { margin: 14px 0; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px dashed var(--line); }
+.actors { display: flex; justify-content: space-between; gap: 8px; }
+.actor { flex: 1; text-align: center; padding: 8px 4px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: .8rem; font-weight: 700; }
+.actor small { display: block; font-weight: 400; opacity: .75; }
+.rows { margin-top: 10px; }
+.row { margin: 10px 0; padding: 0 10px; opacity: 0; animation: pop .45s forwards; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.row .lab { display: block; text-align: center; font-size: .85rem; padding: 0 6px 2px; }
+.row .line { position: relative; height: 2px; background: var(--muted); margin: 0 6px; }
+.row.r .line::after, .row.l .line::before { content: ""; position: absolute; top: -4px; border: 5px solid transparent; }
+.row.r .line::after { right: -2px; border-left: 8px solid var(--muted); border-right: 0; }
+.row.l .line::before { left: -2px; border-right: 8px solid var(--muted); border-left: 0; }
+.row.self { text-align: center; }
+.row.self .lab { display: inline-block; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+
+/* quiz */
+.quiz button { display: block; width: 100%; margin: 6px 0; padding: 10px 14px; text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font: inherit; cursor: pointer; }
+.quiz button.right { background: var(--trust-soft); border-color: var(--trust); }
+.quiz button.wrong { background: #fbefe9; border-color: #b3402a; }
+.quiz .q { margin-bottom: 22px; }
+.quiz .fb { font-size: .88rem; color: var(--muted); min-height: 1.4em; }
+.cards.stack { display: grid; gap: 12px; margin-top: 12px; }
+
+@media (max-width: 560px) { .two { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .row { animation: none; opacity: 1; } }

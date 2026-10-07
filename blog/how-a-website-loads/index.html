@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What happens when you open a website · Md. Sayeed Rahman</title>
+  <meta name="description" content="A visual, step-by-step tutorial on URLs, DNS, TCP and HTTP for newer software engineers.">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../tutorial.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow"><a href="../index.html">← Blog</a></p>
+    <h1>What happens when you open a website</h1>
+    <p class="meta">Networking · Part 1 of 4 · Interactive · ~10 min</p>
+
+    <p><span class="part">Networking series · Part 1 of 4</span></p>
+    <p>You type a web address, press Enter, and a page appears a moment later. A lot happens in that moment. This post walks through it step by step. No networking background needed.</p>
+    <p>By the end you'll know what DNS, TCP and HTTP are. You'll also notice something important: <b>your data passes through machines you don't control.</b> That one fact is why HTTPS exists.</p>
+
+    <h2 class="sec">Reading the address</h2>
+    <p>First, what are you actually typing? A URL has several parts. Click each one.</p>
+    <div class="play">
+      <div class="ctl" id="urlParts" style="gap:4px;font-family:ui-monospace,Menlo,monospace;font-size:1rem"></div>
+      <div class="box" id="urlInfo" style="margin-bottom:0" aria-live="polite"></div>
+    </div>
+
+    <h2 class="sec">The trip, in 6 steps</h2>
+    <p>Think of ordering a pizza by phone. You look up the shop's number, call, say "one margherita please", and they answer "on its way". The web works almost the same way. Click through.</p>
+    <div class="dots" id="tripDots"></div>
+    <div class="stage" id="tripStage" aria-live="polite"></div>
+    <div class="nav2">
+      <button class="btn" id="tripPrev" type="button">← Back</button>
+      <button class="btn btn-primary" id="tripNext" type="button">Next →</button>
+    </div>
+
+    <h2 class="sec">Who is in the middle?</h2>
+    <p>In step 2, your request hopped across many machines. Click a hop to see who owns it.</p>
+    <div class="play">
+      <div class="tabs" id="hops"></div>
+      <div class="box" id="hopInfo" style="margin-bottom:0" aria-live="polite"></div>
+    </div>
+    <div class="box warn"><p><b>Remember this:</b> your request doesn't go straight to the server. It is handed from machine to machine, and each one can see (and technically change) what it carries, unless the data is protected. Part 2 shows what that looks like.</p></div>
+
+    <h2 class="sec">See it yourself</h2>
+    <p>You can watch every step on your own computer. In a terminal:</p>
+<pre><code># Step 1, DNS: what number does this name have?
+dig example.com +short
+
+# Steps 3-5: connect, then show the raw request and response
+curl -v http://example.com
+
+# Step 2: the hops your data takes (macOS / Linux)
+traceroute example.com</code></pre>
+    <p>Or open your browser's DevTools, go to the <b>Network</b> tab, reload any page and click a request. You'll see the same request and response from steps 4 and 5.</p>
+
+    <h2 class="sec">Check yourself</h2>
+    <div class="quiz" id="quiz"></div>
+
+    <h2 class="sec">Next</h2>
+    <p>A request is just text sent across many machines. What does that text look like, and what can a stranger do with it?</p>
+    <div class="cards stack"><a class="card project" href="../plain-http-unsafe/index.html">
+      <div><h3>Plain HTTP and why it's unsafe</h3><p class="kind">Networking · Part 2 of 4 · Interactive</p><p>Play the person on the same Wi‑Fi: read a password, change a payment, fake a bank.</p></div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a></div>
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+
+  <script src="../tutorial.js"></script>
+  <script>
+    /* ---------- Reading the address ---------- */
+    var URL_PARTS = [
+      ["https", "Scheme", "<b>How</b> to talk. <code>http</code> is plain text. <code>https</code> is the same conversation, protected by TLS (the topic of this series)."],
+      ["://", "Separator", "Just punctuation that means \"the address follows\"."],
+      ["www.example.com", "Host", "<b>Which computer</b> you want. A human-friendly name. Computers can't use it directly, they need a number (step 1 below)."],
+      [":443", "Port", "<b>Which door</b> on that computer. One server can run many programs, each listening on its own port. Usually hidden: <code>http</code> defaults to 80, <code>https</code> to 443."],
+      ["/shop/shoes", "Path", "<b>Which page or resource</b> on that computer."],
+      ["?color=red&size=42", "Query", "<b>Extra options</b> for the page, as <code>name=value</code> pairs joined by <code>&amp;</code>."],
+      ["#reviews", "Fragment", "A spot <b>inside</b> the page to scroll to. The browser keeps it to itself and never sends it to the server."]
+    ];
+    var COLORS = ["#c15f3c", "#6b665a", "#1f6b3a", "#7a4fa0", "#2b6fa8", "#a8772b", "#6b665a"];
+    var partsEl = document.getElementById("urlParts"), infoEl = document.getElementById("urlInfo");
+    function showPart(i) {
+      partsEl.innerHTML = URL_PARTS.map(function (p, k) {
+        var on = k === i;
+        return '<button type="button" data-i="' + k + '" style="padding:6px 8px;border-radius:8px;border:2px solid ' + (on ? COLORS[k] : "transparent") + ';background:' + (on ? "var(--bg)" : "none") + ';color:' + COLORS[k] + ';font:inherit;font-weight:700;cursor:pointer">' + p[0] + '</button>';
+      }).join("");
+      infoEl.innerHTML = '<b style="color:' + COLORS[i] + '">' + URL_PARTS[i][1] + ':</b> ' + URL_PARTS[i][2];
+    }
+    partsEl.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) showPart(Number(b.dataset.i)); });
+    showPart(2);
+
+    /* ---------- The trip ---------- */
+    var YOU = ["Your browser", "laptop / phone"], DNS = ["DNS server", "the internet's phonebook"], WEB = ["Web server", "example.com"];
+    var TRIP = [
+      { t: "DNS: look up the number",
+        why: "Computers find each other by number (an IP address), not by name. DNS is the phonebook that turns a name into a number.",
+        html: function () {
+          return diagram([YOU, DNS], [
+            ["r", "\"What is the number for <b>www.example.com</b>?\""],
+            ["l", "\"It is <b>203.0.113.7</b>\""]
+          ], 'Answers get cached, so this only happens the first time. Try <code>dig example.com +short</code>. (The number shown here is a made-up example.)');
+        } },
+      { t: "Travel: packets hop across the internet",
+        why: "You have no cable to the server. Your data is chopped into small pieces (packets) and passed from machine to machine until it arrives.",
+        html: function () {
+          var hop = ["💻 You", "📶 Home router", "🏢 Your ISP", "🌐 Internet routers (many)", "🖥️ Web server"];
+          return '<div class="diagram"><div class="ctl" style="justify-content:center">' +
+            hop.map(function (h, i) { return '<span class="chip">' + h + '</span>' + (i < hop.length - 1 ? '<span>→</span>' : ''); }).join("") +
+            '</div></div><p class="note">Each hop reads the destination number on the packet and forwards it. Run <code>traceroute example.com</code> to list the real ones. Every one of these machines belongs to someone else.</p>';
+        } },
+      { t: "TCP: open a connection",
+        why: "Before sending anything, the two computers check they can hear each other, like \"Hello? / Hi, can you hear me? / Yes!\" on a phone call.",
+        html: function () {
+          return diagram([YOU, WEB], [
+            ["r", "<b>SYN</b>: \"Can we talk?\""],
+            ["l", "<b>SYN-ACK</b>: \"Yes. Can you hear me?\""],
+            ["r", "<b>ACK</b>: \"Loud and clear.\""],
+            ["self", "✅ Connection open. Data now flows reliably and in order."]
+          ], 'This is TCP, the "reliable delivery" layer. It connects to <b>port 80</b> for http or <b>port 443</b> for https.');
+        } },
+      { t: "HTTP request: ask for the page",
+        why: "Now the browser asks for what it wants. An HTTP request is just lines of readable text.",
+        html: function () {
+          return '<pre><code>GET /shop HTTP/1.1\nHost: www.example.com\nUser-Agent: Chrome/126\nAccept: text/html\nCookie: session=abc123</code></pre>' +
+            '<table><tr><td><code>GET /shop</code></td><td>"Please give me the page at /shop."</td></tr>' +
+            '<tr><td><code>Host</code></td><td>Which site (one server can host many).</td></tr>' +
+            '<tr><td><code>User-Agent</code></td><td>Which browser I am.</td></tr>' +
+            '<tr><td><code>Cookie</code></td><td>A small note that proves who I am (my login session).</td></tr></table>';
+        } },
+      { t: "HTTP response: the server answers",
+        why: "The server replies with a status line, some headers, then the content itself, also as text.",
+        html: function () {
+          return '<pre><code>HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: 5120\n\n&lt;html&gt;\n  &lt;h1&gt;Welcome to the shop&lt;/h1&gt;\n  ...\n&lt;/html&gt;</code></pre>' +
+            '<table><tr><th>Status</th><th>Meaning</th></tr>' +
+            '<tr><td><code>200</code></td><td>OK, here it is.</td></tr>' +
+            '<tr><td><code>301</code></td><td>Moved. Go to another address.</td></tr>' +
+            '<tr><td><code>404</code></td><td>Not found.</td></tr>' +
+            '<tr><td><code>500</code></td><td>The server broke.</td></tr></table>';
+        } },
+      { t: "Render, and ask for more",
+        why: "The browser reads the HTML. Whenever it finds a link to another file, it makes another request, often many at once.",
+        html: function () {
+          var files = ["📄 /shop (HTML)", "🎨 /styles.css", "⚙️ /app.js", "🖼️ /shoe1.jpg", "🖼️ /shoe2.jpg", "🔤 /font.woff2", "📡 /api/cart (fetch)"];
+          return '<div class="ctl">' + files.map(function (f) { return '<span class="chip">' + f + '</span>'; }).join("") + '</div>' +
+            '<p class="note">One page can mean dozens of requests, each one steps 3 to 5 again (browsers reuse the open connection to save time). The <code>fetch()</code> your JavaScript makes to a backend API is exactly the same thing: a request and a response.</p>';
+        } }
+    ];
+    stepper(TRIP, "trip");
+
+    /* ---------- Who is in the middle ---------- */
+    var HOPS = [
+      ["📶 Wi‑Fi / router", "Whoever runs the Wi‑Fi: your home, a café, an airport, a hotel. Other people on the same network can often capture its traffic."],
+      ["🏢 Your ISP", "Your internet provider carries all your traffic. They can log which sites you visit and, over plain HTTP, what you send."],
+      ["🌐 Backbone routers", "Companies and governments run the big links between cities and countries. Your traffic crosses networks owned by many different parties."],
+      ["🏬 Server's network", "The hosting provider or data center also sits between the internet and the server."]
+    ];
+    var hopsEl = document.getElementById("hops"), hopInfo = document.getElementById("hopInfo");
+    function showHop(i) {
+      hopsEl.innerHTML = HOPS.map(function (h, k) {
+        return '<button type="button" class="btn' + (k === i ? " btn-primary" : "") + '" data-i="' + k + '">' + h[0] + '</button>';
+      }).join("");
+      hopInfo.innerHTML = '<b>' + HOPS[i][0] + '</b><br>' + HOPS[i][1] + '<br><span class="note">That does not mean they are malicious. The point is you can\'t know, so the data has to protect itself.</span>';
+    }
+    hopsEl.addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) showHop(Number(b.dataset.i)); });
+    showHop(0);
+
+    /* ---------- Quiz ---------- */
+    quiz(document.getElementById("quiz"), [
+      { q: "Why does a browser need DNS?", o: ["To encrypt the page", "To turn a name like example.com into a number computers can connect to", "To download images"], a: 1, e: "DNS is the phonebook: name in, IP address out." },
+      { q: "What is an HTTP request?", o: ["A binary secret code", "A plain-text message asking a server for something", "A kind of cable"], a: 1, e: "Just lines of text: a method and path, then headers." },
+      { q: "Between your laptop and the server, your data passes through...", o: ["Only the server's own network", "A single direct cable", "Many machines owned by different parties"], a: 2, e: "Wi-Fi, ISP, backbone routers, hosting network. That's why data needs protection." }
+    ]);
+  </script>
+</body>
+</html>
