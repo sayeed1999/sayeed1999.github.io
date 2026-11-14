@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The 12-digit rule behind 100 million payment references a day · Md. Sayeed Rahman</title>
+  <meta name="description" content="Pick a date, build an RRN, and see why 12 digits can cover 100 million unique payment references a day.">
+  <link rel="stylesheet" href="../../styles.css">
+  <style>
+    :root {
+      --y: #d9822b; --y-bg: #fdf0e1;
+      --d: #15837a; --d-bg: #e2f4f1;
+      --s: #6d4fd1; --s-bg: #ece8fb;
+      --bad: #d23b3b; --bad-bg: #fde8e8;
+      --ok: var(--trust); --ok-bg: var(--trust-soft);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .y { color: var(--y); } .d { color: var(--d); } .s { color: var(--s); }
+    .mono { font-family: var(--mono); }
+    .doc h2 { margin: 44px 0 12px; font-size: 1.4rem; letter-spacing: -0.02em; font-weight: 700; }
+    .doc h3 { margin: 26px 0 8px; font-size: 1.05rem; color: var(--ink); }
+    .doc code { font-family: var(--mono); font-size: .9em; background: var(--accent-soft); padding: 1px 6px; border-radius: 5px; }
+    .pay-stage[hidden], #hkAfter[hidden], #lanes[hidden], .rrn-table[hidden] { display: none; }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px;
+      margin: 22px 0;
+    }
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--d); }
+    .panel label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    .panel input[type=date],
+    .panel input[type=number],
+    .panel input[type=text],
+    .panel select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--ink);
+      font: inherit;
+      font-family: var(--mono);
+      font-size: 16px;
+    }
+    .panel input:focus, .panel select:focus { outline: 2px solid var(--s); outline-offset: 2px; }
+    .panel input[type=range] { width: 100%; accent-color: var(--s); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .rrn { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; margin: 20px 0 8px; font-family: var(--mono); font-weight: 700; }
+    .seg { display: inline-flex; padding: 10px 12px; border-radius: 12px; font-size: clamp(20px, 5.2vw, 34px); letter-spacing: .06em; transition: opacity .35s, transform .35s; }
+    .seg.y { background: var(--y-bg); color: var(--y); }
+    .seg.d { background: var(--d-bg); color: var(--d); }
+    .seg.s { background: var(--s-bg); color: var(--s); }
+    .seg.hide { opacity: 0; transform: translateY(8px); }
+    .seglabels { display: flex; justify-content: center; gap: 4px; font-size: 12px; font-family: var(--mono); color: var(--muted); }
+    .seglabels span { text-align: center; }
+    .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; font-size: 14px; }
+    .rrn-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 13px; }
+    .rrn-chip.y { background: var(--y-bg); color: var(--y); }
+    .rrn-chip.d { background: var(--d-bg); color: var(--d); }
+    .rrn-chip.s { background: var(--s-bg); color: var(--s); }
+    .explain { display: grid; gap: 10px; margin-top: 18px; }
+    .ex { display: flex; gap: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); font-size: 15px; }
+    .ex .tag { font-family: var(--mono); font-weight: 700; min-width: 62px; }
+    .ex.y { border-left: 4px solid var(--y); }
+    .ex.d { border-left: 4px solid var(--d); }
+    .ex.s { border-left: 4px solid var(--s); }
+    .daybar { height: 14px; background: var(--line); border-radius: 99px; position: relative; margin: 12px 0 4px; overflow: hidden; }
+    .daybar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--d); border-radius: 99px; transition: width .35s; }
+    .daybar-lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+    .receipt { max-width: 300px; margin: 22px auto 0; background: #fffef9; color: #222; border: 1px dashed #bbb; border-radius: 6px; padding: 16px 18px; font-family: var(--mono); font-size: 13px; position: relative; }
+    .receipt hr { border: 0; border-top: 1px dashed #bbb; margin: 10px 0; }
+    .receipt .r { display: flex; justify-content: space-between; gap: 10px; }
+    .receipt b { letter-spacing: .06em; }
+    .receipt .c { text-align: center; font-weight: 700; }
+    .atms { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 560px) { .atms { grid-template-columns: 1fr; } }
+    .atm { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--bg); }
+    .atm .screen { font-family: var(--mono); background: #0e2a26; color: #7cf2d9; border-radius: 8px; padding: 8px 10px; margin: 8px 0 10px; font-size: 14px; }
+    .atm.shared .screen { background: #251b45; color: #c3b5ff; }
+    .toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+    .toggle .btn { border: 0; border-radius: 0; background: transparent; }
+    .toggle .btn.on { background: var(--ink); color: var(--bg); border-color: transparent; }
+    .rrn-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 14px; }
+    .rrn-table th, .rrn-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+    .rrn-table th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .rrn-table td.m { font-family: var(--mono); }
+    .rrn-table tr.dup td { background: var(--bad-bg); }
+    .pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--bad); color: #fff; }
+    .pill.ok { background: var(--ok); }
+    .banner { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; }
+    .banner.bad { background: var(--bad-bg); color: var(--bad); }
+    .banner.ok { background: var(--ok-bg); color: var(--ok); }
+    .banner.info { background: var(--s-bg); color: var(--s); }
+    .lanes { margin-top: 14px; display: grid; gap: 8px; }
+    .lane { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+    .lane .nm { width: 54px; font-family: var(--mono); color: var(--muted); }
+    .lane .track { flex: 1; height: 22px; background: var(--line); border-radius: 6px; position: relative; overflow: hidden; }
+    .lane .bar, .lane .wait { position: absolute; top: 0; bottom: 0; border-radius: 6px; transition: left .6s ease, width .6s ease; left: 0; width: 0; }
+    .lane .bar { background: var(--s); }
+    .lane .wait { background: repeating-linear-gradient(45deg, var(--bad-bg), var(--bad-bg) 6px, transparent 6px, transparent 12px); border: 1px dashed var(--bad); }
+    .slots { display: flex; justify-content: center; gap: 6px; margin: 14px 0; flex-wrap: wrap; }
+    .slot { width: clamp(30px, 8vw, 48px); height: clamp(42px, 10vw, 60px); border-radius: 10px; background: var(--s-bg); color: var(--s); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-weight: 700; font-size: clamp(18px, 5vw, 28px); position: relative; }
+    .slot small { position: absolute; bottom: -18px; font-size: 10px; color: var(--muted); font-weight: 400; }
+    .rrn-big { font-family: var(--mono); font-size: clamp(26px, 6vw, 40px); font-weight: 700; text-align: center; margin: 26px 0 4px; }
+    .sub { text-align: center; color: var(--muted); font-size: 14px; }
+    .decade { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+    @media (max-width: 560px) { .decade { grid-template-columns: repeat(2, 1fr); } }
+    .dg { border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; font-size: 12px; color: var(--muted); transition: all .2s; }
+    .dg b { display: block; font-family: var(--mono); font-size: 26px; color: var(--ink); }
+    .dg.on { background: var(--y-bg); border-color: var(--y); }
+    .dg.on b { color: var(--y); }
+    .dg span.hl { color: var(--y); font-weight: 700; }
+    .formula { font-family: var(--mono); background: var(--bg); border: 1px solid var(--line); padding: 14px; border-radius: 12px; font-size: 15px; overflow-x: auto; margin-top: 14px; text-align: center; }
+    .tradeoff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+    @media (max-width: 560px) { .tradeoff { grid-template-columns: 1fr; } }
+    .tradeoff div { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 15px; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 40px); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 99px; font-size: 14px; opacity: 0; transition: all .25s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .hook { border-width: 2px; border-color: var(--s); }
+    .hook-q { font-size: 1.15rem; margin: 0 0 14px; }
+    .pay-stage { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+    @media (max-width: 560px) { .pay-stage { grid-template-columns: 1fr; } }
+    .dev { background: #22262e; border-radius: 16px; padding: 14px; border-bottom: 8px solid #14161b; }
+    .dscr { background: #0e2a26; color: #7cf2d9; font-family: var(--mono); border-radius: 8px; padding: 18px 12px; min-height: 96px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 15px; }
+    .dscr.ok { background: #12381f; color: #8dffb0; font-weight: 700; }
+    .slipwrap { overflow: hidden; padding-top: 2px; }
+    .slip { margin: 0 auto; transform: translateY(-110%); opacity: 0; transition: transform .8s cubic-bezier(.2,.8,.2,1), opacity .4s; }
+    .slip.out { transform: none; opacity: 1; }
+    .slip .seg { padding: 0; background: none; font-size: inherit; display: inline; letter-spacing: .06em; }
+    @media (prefers-reduced-motion: reduce) {
+      .seg, .daybar i, .lane .bar, .lane .wait, .slip, .toast { transition: none !important; }
+    }
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap doc">
+    <p class="eyebrow"><a href="../index.html">← Blog</a></p>
+    <h1>The 12-digit rule behind 100 million payment references a day</h1>
+    <p class="meta">Payment Systems · Interactive</p>
+
+    <p>A tiny arithmetic rule, <code>YDDDssssssss</code>, can cover 100 million payment references a day for a decade. Don't take my word for it. Pick a date and build one yourself.</p>
+
+<div class="panel hook" id="hook">
+    <div class="panel-title">Try it: a normal day</div>
+    <p class="hook-q">You're at the counter and your card is out. What are you doing?</p>
+    <div class="btns" style="margin-top:0">
+      <button id="hkPos" type="button" class="btn btn-primary">💳 Paying at a shop (POS)</button>
+      <button id="hkAtm" class="btn" type="button">🏧 Withdrawing cash (ATM)</button>
+    </div>
+    <div class="pay-stage" id="stage" hidden>
+      <div class="dev"><div class="dscr" id="dscr"></div></div>
+      <div class="slipwrap"><div class="receipt slip" id="slip">
+        <div class="c" id="slTitle"></div>
+        <div class="c" style="font-weight:400" id="slSub"></div>
+        <hr>
+        <div class="r"><span>Amount</span><span id="slAmt"></span></div>
+        <div class="r"><span>Card</span><span>**** 4821</span></div>
+        <hr>
+        <div class="r"><span>RRN</span><b id="slRrn"></b></div>
+      </div></div>
+    </div>
+    <div id="hkAfter" hidden>
+      <p style="margin:16px 0 12px">See that 12-digit number at the bottom? That's the <strong>RRN</strong>. If this payment ever goes wrong, it's the first thing anyone will ask you for. So how can 12 digits stay unique across <strong>100 million payments a day</strong>?</p>
+      <button id="hkGo" type="button" class="btn btn-primary">Decode this receipt ↓</button>
+    </div>
+  </div>
+
+
+
+
+  <h2>What is an RRN?</h2>
+  <p>Every time you pay in a super shop, a unique reference number is generated for that payment. It's often called the <strong>RRN (Retrieval Reference Number)</strong>, and it's printed on your receipt.</p>
+  <p>If anything goes wrong with the payment, the RRN, often 12 digits, is the key to the whole investigation.</p>
+  <p>Those 12 digits break into three parts: <span class="rrn-chip y">Y</span> + <span class="rrn-chip d">DDD</span> + <span class="rrn-chip s">ssssssss</span> = 1 + 3 + 8 digits.</p>
+
+
+
+  <h2 id="build">1 · Build an RRN</h2>
+  <p>Choose a date and a transaction number. The three blocks update live.</p>
+
+  <div class="panel" id="gen">
+    <div class="panel-title">RRN generator</div>
+    <div class="grid2">
+      <div>
+        <label for="date">Transaction date</label>
+        <input type="date" id="date">
+      </div>
+      <div>
+        <label for="seq">Sequence number (0 – 99,999,999)</label>
+        <input type="number" id="seq" min="0" max="99999999" value="0">
+      </div>
+    </div>
+    <input type="range" id="seqRange" min="0" max="99999999" value="0" style="margin-top:12px" aria-label="Sequence slider">
+    <div class="btns">
+      <button id="first" class="btn" type="button">1st of the day</button>
+      <button id="plus" class="btn" type="button">+1 transaction</button>
+      <button id="rand" class="btn" type="button">Random</button>
+      <button id="last" class="btn" type="button">Last of the day</button>
+      <button id="play" type="button" class="btn btn-primary">▶ Build step by step</button>
+    </div>
+
+    <div class="rrn" id="rrn" aria-live="polite">
+      <span class="seg y" id="sY">6</span>
+      <span class="seg d" id="sD">001</span>
+      <span class="seg s" id="sS">00000000</span>
+    </div>
+    <div class="seglabels" id="segLabels">
+      <span style="color:var(--y)">year</span><span style="color:var(--d)">day</span><span style="color:var(--s)">sequence</span>
+    </div>
+    <div class="btns" style="justify-content:center"><button id="copy" class="btn" type="button">Copy RRN</button></div>
+
+    <div class="explain">
+      <div class="ex y"><span class="tag y">Y</span><span id="exY"></span></div>
+      <div class="ex d"><span class="tag d">DDD</span><span id="exD"></span></div>
+      <div class="ex s"><span class="tag s">ssssssss</span><span id="exS"></span></div>
+    </div>
+
+    <div style="margin-top:16px">
+      <label>Where in the year? <span id="leapNote"></span></label>
+      <div class="daybar"><i id="dayFill"></i></div>
+      <div class="daybar-lbl"><span>Jan 1 (001)</span><span id="dayEnd">Dec 31 (365)</span></div>
+    </div>
+
+    <div class="receipt" aria-hidden="true">
+      <div class="c">SUPER SHOP</div>
+      <div class="c" style="font-weight:400">Dhaka Branch</div>
+      <hr>
+      <div class="r"><span>Date</span><span id="rcDate"></span></div>
+      <div class="r"><span>Amount</span><span>৳ 1,250.00</span></div>
+      <div class="r"><span>Card</span><span>**** 4821</span></div>
+      <hr>
+      <div class="r"><span>RRN</span><b id="rcRrn"></b></div>
+    </div>
+  </div>
+
+  <p>Some examples from the original article, which you can reproduce with the generator:</p>
+  <div class="panel" style="padding:14px 18px">
+    <table class="rrn-table">
+      <tr><th>RRN</th><th>Meaning</th><th></th></tr>
+      <tr><td class="m">600100000000</td><td>1st transaction on 1 Jan 2026</td><td><button class="btn" type="button" data-ex="2026-01-01,0">Try</button></td></tr>
+      <tr><td class="m">603100000042</td><td>43rd transaction on 31 Jan 2026</td><td><button class="btn" type="button" data-ex="2026-01-31,42">Try</button></td></tr>
+      <tr><td class="m">936599999999</td><td>The 100 millionth (last) transaction on 31 Dec 2029</td><td><button class="btn" type="button" data-ex="2029-12-31,99999999">Try</button></td></tr>
+    </table>
+  </div>
+
+
+
+  <h2>2 · How does it get generated?</h2>
+  <p>Take an ATM. Its <code>ssssssss</code> counter starts at <code>00000000</code> every day at 12:00 AM, and each payment bumps it by 1.</p>
+  <p>But wait: two people making their <em>n</em>th transaction at two different ATMs get the <strong>same RRN</strong>, because the 12 digits contain no ATM identifier. Try it below.</p>
+
+  <div class="panel" id="atmCard">
+    <div class="panel-title">Collision lab</div>
+    <div class="toggle" role="group" aria-label="Counter mode">
+      <button id="modePer" class="btn on" type="button">One counter per ATM</button>
+      <button id="modeShared" class="btn" type="button">One shared counter</button>
+    </div>
+
+    <div class="atms" id="atms"></div>
+
+    <div class="btns">
+      <button id="payBoth" type="button" class="btn btn-primary">Both pay at the same instant</button>
+      <button id="resetAtm" class="btn" type="button">Reset</button>
+    </div>
+
+    <div class="lanes" id="lanes" hidden>
+      <div class="lane"><span class="nm">ATM A</span><div class="track"><div class="bar" id="barA"></div></div></div>
+      <div class="lane"><span class="nm">ATM B</span><div class="track"><div class="wait" id="waitB"></div><div class="bar" id="barB"></div></div></div>
+    </div>
+
+    <div id="atmBanner"></div>
+
+    <table class="rrn-table" id="logTbl" hidden>
+      <thead><tr><th>#</th><th>ATM</th><th>RRN</th><th>Status</th></tr></thead>
+      <tbody id="log"></tbody>
+    </table>
+  </div>
+
+  <h3>The solution?</h3>
+  <p>Some payment systems don't require the RRN to be universally unique. You can still tell two transactions apart by checking <em>which ATM</em> they happened on. The pair <code>(ATM ID, RRN)</code> is unique, and the RRN doesn't have to be.</p>
+
+  <h3>What if we still want global uniqueness?</h3>
+  <p>Use a shared counter, maybe in a database or Redis. Every transaction increments it, and the next one waits. Flip the toggle above and press <strong>Both pay at the same instant</strong> to see the cost: the second ATM has to queue. Every approach is a trade-off, and your team decides.</p>
+  <div class="tradeoff">
+    <div><strong>Per-ATM counters</strong><br>Fast, no coordination, no single point of failure. RRN alone isn't unique, so you need the ATM ID alongside it.</div>
+    <div><strong>Shared counter</strong><br>RRN is unique everywhere. Concurrent requests queue behind one counter, adding latency and a bottleneck.</div>
+  </div>
+
+
+
+  <h2>3 · Daily capacity: exactly 100 million</h2>
+  <p>The sequence block <code>ssssssss</code> has 8 digits, running from <code>00000000</code> to <code>99999999</code>. That's exactly 100,000,000 references per day.</p>
+  <div class="panel">
+    <div class="panel-title">Sequence capacity</div>
+    <div class="slots" id="slots"></div>
+    <div class="rrn-big" id="capDay">100,000,000</div>
+    <div class="sub">unique references per day, per generator (100 million)</div>
+    <div class="formula" id="capFormula">10<sup>8</sup> = 100,000,000</div>
+  </div>
+  <p>The day block <code>DDD</code> runs <code>001–365</code> in a normal year and <code>001–366</code> in a leap year, which gives about 365 × 100 million unique references a year.</p>
+
+
+
+  <h2>4 · The year cycle: 10 years, then reuse</h2>
+  <p>The year uses only one digit, so it repeats every decade. Slide through the years and see which ones share a digit.</p>
+  <div class="panel">
+    <div class="panel-title">Year digit explorer</div>
+    <label for="yr">Year: <strong id="yrLbl" class="mono">2026</strong></label>
+    <input type="range" id="yr" min="2000" max="2060" value="2026">
+    <div class="decade" id="decade"></div>
+    <div class="banner info" id="yrNote" style="margin-top:14px"></div>
+  </div>
+  <p>For a real-time dispute window, that's fine, since nobody is investigating a payment from ten years ago. But it does mean the number alone <strong>isn't a permanent global ID</strong>. Try decoding an RRN to see the ambiguity:</p>
+
+  <div class="panel">
+    <div class="panel-title">RRN decoder</div>
+    <label for="dec">Enter a 12-digit RRN</label>
+    <input type="text" id="dec" inputmode="numeric" maxlength="12" value="603100000042" placeholder="e.g. 603100000042">
+    <div id="decOut" style="margin-top:14px"></div>
+  </div>
+
+
+
+  <h2>5 · Total capacity over a decade</h2>
+  <p>Within one 10-year cycle, the date prefix <code>YDDD</code> takes about 3,652 distinct values (365 × 10 days, plus the leap days). Multiply by 100 million sequence numbers per day. Choose where your cycle starts to see the exact count.</p>
+  <div class="panel">
+    <div class="panel-title">Decade calculator</div>
+    <label for="cycle">10-year cycle starting in</label>
+    <select id="cycle"></select>
+    <div class="formula" id="capCalc"></div>
+    <div class="rrn-big" id="capTotal"></div>
+    <div class="sub" id="capTotalSub"></div>
+  </div>
+  <p>That's <strong>per sequence generator</strong>, before old numbers start being reused.</p>
+
+
+
+
+    <footer>
+      <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+    </footer>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const pad = (n,l) => String(n).padStart(l,'0');
+  const fmt = n => n.toLocaleString('en-US');
+  const isLeap = y => (y%4===0 && y%100!==0) || y%400===0;
+  const daysIn = y => isLeap(y) ? 366 : 365;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const MAXSEQ = 99999999;
+
+  function doy(y,m,d){ return Math.round((Date.UTC(y,m-1,d) - Date.UTC(y,0,0)) / 864e5); }
+  function dateFromDoy(y,n){ const dt = new Date(Date.UTC(y,0,n)); return {m:dt.getUTCMonth(), d:dt.getUTCDate()}; }
+  function parseDate(v){ const p = v.split('-').map(Number); return p.length===3 && p.every(Number.isFinite) ? {y:p[0],m:p[1],d:p[2]} : null; }
+  function clampSeq(v){ v = Math.floor(Number(v)); if(!Number.isFinite(v)||v<0) return 0; return Math.min(v,MAXSEQ); }
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('show'),1500); }
+  function ordinal(n){ const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+  /* ---------- 1. Generator ---------- */
+  const dateEl=$('date'), seqEl=$('seq'), rangeEl=$('seqRange');
+  const now = new Date();
+  dateEl.value = now.getFullYear()+'-'+pad(now.getMonth()+1,2)+'-'+pad(now.getDate(),2);
+
+  function current(){
+    const dt = parseDate(dateEl.value);
+    if(!dt || dt.y<1000) return null;
+    const n = doy(dt.y,dt.m,dt.d);
+    return {dt, n, Y:dt.y%10, seq:clampSeq(seqEl.value)};
+  }
+  function prefix(){
+    const c = current(); if(!c) return null;
+    return c.Y + pad(c.n,3);
+  }
+  function renderGen(){
+    const c = current();
+    if(!c){ return; }
+    const sY=String(c.Y), sD=pad(c.n,3), sS=pad(c.seq,8);
+    $('sY').textContent=sY; $('sD').textContent=sD; $('sS').textContent=sS;
+    $('exY').innerHTML = 'Last digit of <strong>'+c.dt.y+'</strong> → <strong class="y">'+sY+'</strong>';
+    $('exD').innerHTML = MONTHS[c.dt.m-1]+' '+c.dt.d+' is day <strong class="d">'+c.n+'</strong> of '+daysIn(c.dt.y)+' → padded to <strong class="d">'+sD+'</strong>';
+    $('exS').innerHTML = (c.seq===0?'The 1st':ordinal(c.seq+1))+' transaction of the day (counter = '+fmt(c.seq)+') → padded to <strong class="s">'+sS+'</strong>';
+    const total = daysIn(c.dt.y);
+    $('dayFill').style.width = (c.n/total*100)+'%';
+    $('dayEnd').textContent = 'Dec 31 ('+pad(total,3)+')';
+    $('leapNote').textContent = isLeap(c.dt.y) ? '(leap year: 366 days)' : '(normal year: 365 days)';
+    const rrn = sY+sD+sS;
+    $('rcRrn').textContent = rrn;
+    $('rcDate').textContent = pad(c.dt.d,2)+'/'+pad(c.dt.m,2)+'/'+c.dt.y;
+    rangeEl.value = c.seq;
+    window.__rrn = rrn;
+    renderDecoderHint();
+  }
+  function setSeq(v){ seqEl.value = clampSeq(v); renderGen(); }
+  seqEl.addEventListener('input', ()=>{ if(seqEl.value!=='') renderGen(); });
+  seqEl.addEventListener('blur', ()=>setSeq(seqEl.value||0));
+  rangeEl.addEventListener('input', ()=>setSeq(rangeEl.value));
+  dateEl.addEventListener('input', renderGen);
+  $('first').onclick = ()=>setSeq(0);
+  $('plus').onclick  = ()=>setSeq(clampSeq(seqEl.value)+1);
+  $('last').onclick  = ()=>setSeq(MAXSEQ);
+  $('rand').onclick  = ()=>setSeq(Math.floor(Math.random()*(MAXSEQ+1)));
+  $('copy').onclick  = ()=>{
+    const t = window.__rrn;
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(()=>toast('Copied '+t)).catch(()=>toast(t));
+  };
+  document.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{
+    const [d,s]=b.dataset.ex.split(',');
+    dateEl.value=d; setSeq(Number(s));
+    $('gen').scrollIntoView({behavior:'smooth',block:'center'});
+  });
+  $('play').onclick = ()=>{
+    const segs=[$('sY'),$('sD'),$('sS')];
+    segs.forEach(s=>s.classList.add('hide'));
+    segs.forEach((s,i)=>setTimeout(()=>s.classList.remove('hide'), 450*(i+1)));
+  };
+
+  /* ---------- 2. Collision lab ---------- */
+  let mode='per', counters={A:0,B:0}, shared=0, log=[];
+  function atmCard(id){
+    const val = mode==='per' ? counters[id] : shared;
+    return '<div class="atm '+(mode==='shared'?'shared':'')+'">'+
+      '<strong>ATM '+id+'</strong>'+
+      '<div class="screen">'+(mode==='per'?'local counter':'shared counter')+': '+pad(val,8)+'</div>'+
+      '<button class="btn" type="button" data-pay="'+id+'">Pay at ATM '+id+'</button></div>';
+  }
+  function pay(id){
+    const p = prefix() || '6001';
+    let n;
+    if(mode==='per'){ n=counters[id]++; } else { n=shared++; }
+    log.push({atm:id, rrn:p+pad(n,8)});
+    renderAtm();
+  }
+  function renderAtm(){
+    $('atms').innerHTML = atmCard('A')+atmCard('B');
+    document.querySelectorAll('[data-pay]').forEach(b=>b.onclick=()=>pay(b.dataset.pay));
+    $('modePer').classList.toggle('on',mode==='per');
+    $('modeShared').classList.toggle('on',mode==='shared');
+    const counts={}; log.forEach(l=>counts[l.rrn]=(counts[l.rrn]||0)+1);
+    $('logTbl').hidden = log.length===0;
+    $('log').innerHTML = log.map((l,i)=>{
+      const dup = counts[l.rrn]>1;
+      return '<tr class="'+(dup?'dup':'')+'"><td>'+(i+1)+'</td><td>'+l.atm+'</td><td class="m">'+l.rrn+'</td><td>'+
+        (dup?'<span class="pill">SAME RRN</span>':'<span class="pill ok">unique</span>')+'</td></tr>';
+    }).join('');
+    const hasDup = Object.values(counts).some(c=>c>1);
+    let html='';
+    if(hasDup) html='<div class="banner bad"><strong>Collision!</strong> Two different payments carry the same RRN. Tell them apart with the pair (ATM ID, RRN), or switch to a shared counter.</div>';
+    else if(log.length>1) html='<div class="banner ok">'+(mode==='shared'?'Every RRN is globally unique, because they all draw from one counter.':'No collisions yet. Press Pay on both ATMs when their counters match.')+'</div>';
+    else html='<div class="banner info">Tip: in per-ATM mode, press Pay at ATM A, then Pay at ATM B.</div>';
+    $('atmBanner').innerHTML = html;
+  }
+  function setMode(m){ mode=m; counters={A:0,B:0}; shared=0; log=[]; $('lanes').hidden=true; renderAtm(); }
+  $('modePer').onclick=()=>setMode('per');
+  $('modeShared').onclick=()=>setMode('shared');
+  $('resetAtm').onclick=()=>setMode(mode);
+  $('payBoth').onclick=()=>{
+    const lanes=$('lanes'), bA=$('barA'), bB=$('barB'), wB=$('waitB');
+    lanes.hidden=false;
+    [bA,bB,wB].forEach(e=>{e.style.transition='none';e.style.left='0';e.style.width='0';});
+    void lanes.offsetWidth;
+    [bA,bB,wB].forEach(e=>e.style.transition='');
+    requestAnimationFrame(()=>{
+      bA.style.left='0'; bA.style.width='40%';
+      if(mode==='per'){ bB.style.left='0'; bB.style.width='40%'; }
+      else { wB.style.left='0'; wB.style.width='40%'; setTimeout(()=>{ wB.style.width='0'; bB.style.left='40%'; bB.style.width='40%'; },600); }
+    });
+    pay('A'); pay('B');
+  };
+
+  /* ---------- 3. Capacity ---------- */
+  (function(){
+    const s=$('slots');
+    for(let i=0;i<8;i++){ s.insertAdjacentHTML('beforeend','<div class="slot">9<small>'+(i+1)+'</small></div>'); }
+    $('capFormula').innerHTML = '10<sup>8</sup> = 100,000,000 (100 million)';
+  })();
+
+  /* ---------- 4. Year cycle ---------- */
+  const yrEl=$('yr');
+  function renderYear(){
+    const y=Number(yrEl.value), dgt=y%10;
+    $('yrLbl').textContent=y;
+    let html='';
+    for(let d=0;d<10;d++){
+      const yrs=[]; for(let k=2000+d;k<=2060;k+=10) yrs.push(k);
+      html+='<div class="dg '+(d===dgt?'on':'')+'"><b>'+d+'</b>'+yrs.map(k=>k===y?'<span class="hl">'+k+'</span>':k).join(' · ')+'</div>';
+    }
+    $('decade').innerHTML=html;
+    const same=[]; for(let k=2000+dgt;k<=2060;k+=10) if(k!==y) same.push(k);
+    $('yrNote').innerHTML='In RRNs, <strong>'+y+'</strong> becomes the digit <strong>'+dgt+'</strong>. The same digit also means '+same.join(', ')+'. That is why the number alone is not a permanent global ID.';
+  }
+  yrEl.addEventListener('input',renderYear); renderYear();
+
+  /* Decoder */
+  const decEl=$('dec');
+  function renderDecoder(){
+    const v=decEl.value.replace(/\D/g,'');
+    if(decEl.value!==v) decEl.value=v;
+    const out=$('decOut');
+    if(v.length!==12){ out.innerHTML='<div class="banner info">Enter exactly 12 digits ('+v.length+'/12).</div>'; return; }
+    const Y=Number(v[0]), D=Number(v.slice(1,4)), S=Number(v.slice(4));
+    let html='<div class="rrn" style="margin:0 0 12px"><span class="seg y">'+v[0]+'</span><span class="seg d">'+v.slice(1,4)+'</span><span class="seg s">'+v.slice(4)+'</span></div>';
+    if(D<1||D>366){ html+='<div class="banner bad">Day-of-year <strong>'+pad(D,3)+'</strong> is outside 001–366, so this is not a valid RRN in this format.</div>'; out.innerHTML=html; return; }
+    html+='<p style="margin:0 0 8px">Transaction <strong>#'+fmt(S+1)+'</strong> of the day, on day <strong>'+D+'</strong>. Possible dates:</p><div class="legend">';
+    let found=0;
+    for(let k=2000+Y;k<=2060;k+=10){
+      if(D>daysIn(k)) continue;
+      const r=dateFromDoy(k,D); found++;
+      html+='<span class="rrn-chip d">'+MONTHS[r.m].slice(0,3)+' '+r.d+', '+k+'</span>';
+    }
+    html+='</div>';
+    if(!found) html+='<div class="banner bad">Day 366 only exists in leap years, and none match this year digit in 2000–2060.</div>';
+    out.innerHTML=html;
+  }
+  function renderDecoderHint(){}
+  decEl.addEventListener('input',renderDecoder); renderDecoder();
+
+  /* ---------- 5. Decade capacity ---------- */
+  (function(){
+    const sel=$('cycle');
+    for(let y=2020;y<=2035;y++) sel.insertAdjacentHTML('beforeend','<option value="'+y+'"'+(y===2026?' selected':'')+'>'+y+' – '+(y+9)+'</option>');
+    function calc(){
+      const s=Number(sel.value); let days=0, leaps=0;
+      for(let y=s;y<s+10;y++){ days+=daysIn(y); if(isLeap(y)) leaps++; }
+      const total=days*1e8;
+      $('capCalc').innerHTML=fmt(days)+' days <span style="color:var(--muted)">(365 × 10 + '+leaps+' leap day'+(leaps===1?'':'s')+')</span> × 10<sup>8</sup>';
+      $('capTotal').textContent=(total/1e9).toFixed(1)+' billion';
+      $('capTotalSub').textContent='= '+fmt(total)+' unique references per generator';
+    }
+    sel.addEventListener('change',calc); calc();
+  })();
+
+  /* ---------- Hook: POS / ATM ---------- */
+  (function(){
+    let busy=false, lastSeq=0;
+    const scenes={
+      pos:{title:'SUPER SHOP',sub:'Dhaka Branch',amt:'৳ 1,250.00',steps:['Tap your card…','Contacting your bank…']},
+      atm:{title:'ATM WITHDRAWAL',sub:'Booth #0417',amt:'৳ 5,000.00',steps:['Enter PIN…','Contacting your bank…']}
+    };
+    function run(kind){
+      if(busy) return; busy=true;
+      const sc=scenes[kind], now=new Date();
+      const y=now.getFullYear(), n=doy(y,now.getMonth()+1,now.getDate());
+      lastSeq=Math.floor(Math.random()*90000000)+1000;
+      const rrn=String(y%10)+pad(n,3)+pad(lastSeq,8);
+      $('stage').hidden=false; $('hkAfter').hidden=true;
+      const slip=$('slip'), scr=$('dscr');
+      slip.classList.remove('out'); scr.className='dscr';
+      $('slTitle').textContent=sc.title; $('slSub').textContent=sc.sub; $('slAmt').textContent=sc.amt;
+      $('slRrn').innerHTML='<span class="seg y">'+rrn[0]+'</span><span class="seg d">'+rrn.slice(1,4)+'</span><span class="seg s">'+rrn.slice(4)+'</span>';
+      scr.textContent=sc.steps[0];
+      setTimeout(()=>scr.textContent=sc.steps[1],900);
+      setTimeout(()=>{ scr.textContent='APPROVED ✓'; scr.className='dscr ok'; },1900);
+      setTimeout(()=>{ slip.classList.add('out'); },2300);
+      setTimeout(()=>{ $('hkAfter').hidden=false; busy=false; },3200);
+    }
+    $('hkPos').onclick=()=>run('pos');
+    $('hkAtm').onclick=()=>run('atm');
+    $('hkGo').onclick=()=>{
+      const now=new Date();
+      dateEl.value=now.getFullYear()+'-'+pad(now.getMonth()+1,2)+'-'+pad(now.getDate(),2);
+      setSeq(lastSeq);
+      $('build').scrollIntoView({behavior:'smooth',block:'start'});
+    };
+  })();
+
+  renderGen(); renderAtm();
+})();
+</script>
+</body>
+</html>
