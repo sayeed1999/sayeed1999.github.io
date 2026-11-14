@@ -84,6 +84,13 @@ h1 {
   font-size: 0.85rem;
   color: var(--muted);
 }
+.card-chips { margin: 14px 0 0; }
+.card-chips li {
+  color: var(--trust);
+  background: var(--trust-soft);
+  border-color: var(--trust-line);
+  font-weight: 600;
+}
 
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 24px; }
 .filters button {
