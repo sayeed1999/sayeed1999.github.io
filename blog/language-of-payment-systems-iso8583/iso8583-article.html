@@ -54,6 +54,7 @@ body{margin:0;background:#fff}
 .iso8583 *,.iso8583 *::before,.iso8583 *::after{box-sizing:border-box}
 .iso8583 h1{font-size:2rem;line-height:1.2;margin:0 0 .35em;letter-spacing:-.01em;font-weight:700;text-transform:none;color:var(--fg)}
 .iso8583 h2{font-size:1.45rem;line-height:1.3;margin:2.4em 0 .5em;letter-spacing:-.005em;font-weight:700;text-transform:none;color:var(--fg)}
+.iso8583 #walkthrough{scroll-margin-top:76px}
 .iso8583 h3{font-size:1.1rem;margin:1.6em 0 .4em;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg)}
 .iso8583 .back{margin:0 0 1em;font-weight:600}
 .iso8583 .back a{color:var(--accent)}
@@ -171,6 +172,11 @@ body{margin:0;background:#fff}
 <h1>Language of payment systems:<br>ISO 8583 protocol</h1>
 <p class="small">Payment Systems · Interactive</p>
 
+<div class="note">
+  <p>Do you want to walk through a real message directly?</p>
+  <a class="btn primary" href="#walkthrough">Walk through a real message</a>
+</div>
+
 <p class="lead">Payment machines like ATMs and POS terminals, the ones where you tap your card over NFC, don't speak the HTTP that 99% of software engineers are used to.</p>
 
 <p class="big">Then how do they talk?</p>
@@ -252,7 +258,7 @@ body{margin:0;background:#fff}
 <p>In a real log you'll see something like <code>703C468008C09000</code>. The terminal never sent those characters. It sent 8 raw bytes, and the logging tool printed each byte as a pair of hex digits.</p>
 
 <!-- ============ 4 ============ -->
-<h2><span class="num">4</span>Walk through a real message</h2>
+<h2 id="walkthrough"><span class="num">4</span>Walk through a real message</h2>
 <p>This is what a terminal sends for a 150.00 sale, as it appears in a log: one long string, with no separators. The message does not mark its own boundaries. Both sides know the rules, so we read it <strong>left to right</strong>: finish one piece, and it tells us where the next one starts.</p>
 <p>Press <strong>Start</strong>, then <strong>Next piece</strong>. You can also click any piece you've already passed.</p>
 
