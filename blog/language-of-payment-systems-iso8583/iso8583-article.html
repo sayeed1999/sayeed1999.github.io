@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language of payment systems: ISO 8583 protocol · Md. Sayeed Rahman</title>
+<meta name="description" content="Payment terminals and ATMs don't speak HTTP. An interactive, beginner-friendly tour of ISO 8583, the 1987 message format behind card payments.">
+<link rel="stylesheet" href="../../styles.css?v=10">
+<style>
+body{margin:0;background:#fff}
+@media (prefers-color-scheme:dark){
+  body{background:#14181f;color:#e8ecf3}
+  .topbar{background:color-mix(in srgb,#14181f 86%,transparent);border-bottom-color:#2b3340}
+  .brand{background:#e8ecf3;color:#14181f}
+  nav a{color:#9aa5b8}
+  nav a:hover{color:#e8ecf3}
+}
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+<style>
+.iso8583{
+  --bg:#ffffff;--fg:#1b2230;--muted:#586377;--line:#dde2ea;--card:#f5f7fa;
+  --accent:#2457d6;--accent-fg:#ffffff;--accent-soft:#e4ecff;
+  --ok:#0f7a43;--ok-soft:#dff5e8;--warn:#a85a00;--warn-soft:#fff1de;--bad:#b3261e;
+  --t0:#dbe7ff;--s0:#3b6fe0;--t1:#ffe5c7;--s1:#e0861a;--t2:#d3f2df;--s2:#2a9d5c;
+  --t3:#f0dcfb;--s3:#a050cf;--t4:#fff1b8;--s4:#c9a400;--t5:#ffd9de;--s5:#d94a5e;
+  background:var(--bg);color:var(--fg);
+  font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  width:min(720px,calc(100% - 40px));margin:0 auto;padding:28px 0 8px;
+}
+@media (prefers-color-scheme:dark){
+  .iso8583{
+    --bg:#14181f;--fg:#e8ecf3;--muted:#9aa5b8;--line:#2b3340;--card:#1c222c;
+    --accent:#7aa2ff;--accent-fg:#0d1220;--accent-soft:#223152;
+    --ok:#4cd08a;--ok-soft:#173826;--warn:#ffb459;--warn-soft:#3a2a12;--bad:#ff8a80;
+    --t0:#25375e;--s0:#6f9bff;--t1:#4a3318;--s1:#ffa14a;--t2:#1c4430;--s2:#4cd08a;
+    --t3:#3d2755;--s3:#c58cf0;--t4:#4a4210;--s4:#e8cb3a;--t5:#512a31;--s5:#ff7f92;
+  }
+}
+.iso8583 *,.iso8583 *::before,.iso8583 *::after{box-sizing:border-box}
+.iso8583 h1{font-size:2rem;line-height:1.2;margin:0 0 .35em;letter-spacing:-.01em;font-weight:700;text-transform:none;color:var(--fg)}
+.iso8583 h2{font-size:1.45rem;line-height:1.3;margin:2.4em 0 .5em;letter-spacing:-.005em;font-weight:700;text-transform:none;color:var(--fg)}
+.iso8583 h3{font-size:1.1rem;margin:1.6em 0 .4em;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg)}
+.iso8583 .back{margin:0 0 1em;font-weight:600}
+.iso8583 .back a{color:var(--accent)}
+.iso8583 p{margin:0 0 1em}
+.iso8583 .lead{font-size:1.12rem}
+.iso8583 .big{font-size:1.5rem;font-weight:700;line-height:1.3;margin:1.2em 0 .5em}
+.iso8583 .small{font-size:.9rem;color:var(--muted)}
+.iso8583 .num{display:inline-block;min-width:1.7em;margin-right:.35em;padding:0 .3em;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:.8em;text-align:center}
+.iso8583 code,.iso8583 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+.iso8583 code{font-size:.88em;background:var(--card);border:1px solid var(--line);padding:1px 5px;border-radius:5px}
+.iso8583 ul,.iso8583 ol{padding-left:1.3em;margin:0 0 1em}
+.iso8583 li{margin:.25em 0}
+
+.iso8583 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:18px 0}
+.iso8583 .note{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:18px 0}
+.iso8583 .note>:last-child{margin-bottom:0}
+.iso8583 .note.warn{border-color:var(--warn);background:var(--warn-soft)}
+.iso8583 .note.ok{border-color:var(--ok);background:var(--ok-soft)}
+.iso8583 .note strong:first-child{display:inline-block;margin-right:.2em}
+
+.iso8583 .btn{font:inherit;font-size:.95rem;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.iso8583 .btn:hover:not(:disabled){border-color:var(--accent)}
+.iso8583 .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:600}
+.iso8583 .btn:disabled{opacity:.4;cursor:not-allowed}
+.iso8583 button:focus-visible,.iso8583 input:focus-visible,.iso8583 [tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.iso8583 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.iso8583 .row .grow{flex:1}
+
+.iso8583 .tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.iso8583 .tab{font:inherit;font-size:.95rem;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.iso8583 .tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.iso8583 .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84rem;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.iso8583 .bars{margin-top:14px;display:grid;gap:8px}
+.iso8583 .bar{display:grid;grid-template-columns:130px 1fr;gap:10px;align-items:center;font-size:.9rem}
+.iso8583 .bar .track{background:var(--line);border-radius:6px;height:26px;overflow:hidden}
+.iso8583 .bar .fill{display:block;height:100%;border-radius:6px;padding:0 8px;line-height:26px;font-weight:600;font-size:.85rem;white-space:nowrap;color:#fff;transition:width .4s}
+.iso8583 .bar .fill.json{background:#c2562b}
+.iso8583 .bar .fill.iso{background:var(--ok)}
+@media (prefers-color-scheme:dark){.iso8583 .bar .fill{color:#101418}}
+
+.iso8583 .tbl{overflow-x:auto;margin:12px 0 18px}
+.iso8583 table{border-collapse:collapse;width:100%;font-size:.92rem}
+.iso8583 th,.iso8583 td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.iso8583 th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+
+.iso8583 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.iso8583 .chip{display:inline-block;padding:1px 9px;border-radius:999px;background:var(--t,var(--card));border:1px solid var(--s,var(--line));font-size:.8rem;font-weight:600;white-space:nowrap}
+.iso8583 .chip i{font-style:normal;font-weight:400;margin-left:.3em}
+.iso8583 .k0{--t:var(--t0);--s:var(--s0)}.iso8583 .k1{--t:var(--t1);--s:var(--s1)}
+.iso8583 .k2{--t:var(--t2);--s:var(--s2)}.iso8583 .k3{--t:var(--t3);--s:var(--s3)}
+.iso8583 .k4{--t:var(--t4);--s:var(--s4)}.iso8583 .k5{--t:var(--t5);--s:var(--s5)}
+
+/* bits widget */
+.iso8583 .bitrow{display:flex;gap:6px}
+.iso8583 .bit{flex:1 1 0;max-width:60px;min-width:0;font:inherit;padding:8px 0 6px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.iso8583 .bit .bv{font:700 1.4rem/1.2 ui-monospace,Menlo,Consolas,monospace}
+.iso8583 .bit .bw{font-size:.7rem;color:var(--muted)}
+.iso8583 .bit.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.iso8583 .bit.on .bw{color:var(--accent-fg);opacity:.8}
+.iso8583 .eq{font:600 1.05rem/1.6 ui-monospace,Menlo,Consolas,monospace;margin-top:12px}
+.iso8583 .eq b{color:var(--accent);font-size:1.25em}
+.iso8583 .chars{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.iso8583 .ch{display:flex;flex-direction:column;align-items:center;min-width:2.4em;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-family:ui-monospace,Menlo,Consolas,monospace}
+.iso8583 .ch b{font-size:1.05rem}
+.iso8583 .ch i{font-style:normal;font-size:.8rem;color:var(--accent)}
+
+.iso8583 input[type=text]{font:inherit;font-size:.95rem;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg)}
+.iso8583 input[aria-invalid="true"]{border-color:var(--bad)}
+.iso8583 label{display:block;font-size:.85rem;font-weight:600;margin-bottom:4px}
+.iso8583 .hint{font-weight:400;color:var(--muted)}
+
+/* message viewer */
+.iso8583 .hexbox{font:15px/2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow-wrap:anywhere}
+.iso8583 .seg{background:var(--t);border-bottom:3px solid var(--s);border-radius:2px;padding:1px 0;cursor:pointer}
+.iso8583 .seg.cur{box-shadow:0 0 0 2px var(--fg);position:relative}
+.iso8583 .rest{color:var(--muted)}
+.iso8583 .detail{margin-top:12px}
+.iso8583 .dtitle{font-weight:700;font-size:1.05rem;margin-bottom:6px}
+.iso8583 .dhex{font:600 1.1rem/1.5 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.05em;margin-bottom:8px;overflow-wrap:anywhere}
+.iso8583 dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0}
+.iso8583 dt{color:var(--muted);font-size:.85rem;padding-top:2px}
+.iso8583 dd{margin:0}
+.iso8583 .prog{color:var(--muted);font-size:.9rem;margin-left:auto}
+
+/* bitmap explorer */
+.iso8583 .brow{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.iso8583 .blab{flex:0 0 3.2em;font:600 .95rem ui-monospace,Menlo,Consolas,monospace;color:var(--accent);text-align:right}
+.iso8583 .bcells{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.iso8583 .cell{font:600 .75rem ui-monospace,Menlo,Consolas,monospace;height:34px;min-width:0;padding:0;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
+.iso8583 .cell.on{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.iso8583 .cell.flag{border:2px dashed var(--warn)}
+.iso8583 .bmhex{font:700 1.5rem/1.3 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em;overflow-wrap:anywhere}
+.iso8583 .bmhex .hl{background:var(--warn-soft);color:var(--warn);border-radius:4px;padding:0 3px}
+
+/* builder */
+.iso8583 .form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.iso8583 .err{color:var(--bad);font-size:.88rem;margin-top:8px;min-height:1.2em}
+
+@media (max-width:560px){
+  .iso8583{font-size:16px}
+  .iso8583 h1{font-size:1.65rem}
+  .iso8583 .form{grid-template-columns:1fr}
+  .iso8583 dl{grid-template-columns:1fr;gap:0}
+  .iso8583 dd{margin-bottom:8px}
+  .iso8583 .bar{grid-template-columns:1fr}
+  .iso8583 .blab{flex-basis:2.4em}
+}
+@media (prefers-reduced-motion:reduce){.iso8583 *{transition:none!important}}
+</style>
+
+<article class="iso8583" id="iso8583">
+<noscript><p class="note warn">This article is interactive. Turn on JavaScript to use the widgets.</p></noscript>
+
+<p class="small back"><a href="../index.html">← Blog</a></p>
+<h1>Language of payment systems:<br>ISO 8583 protocol</h1>
+<p class="small">Payment Systems · Interactive</p>
+
+<p class="lead">Payment machines like ATMs and POS terminals, the ones where you tap your card over NFC, don't speak the HTTP that 99% of software engineers are used to.</p>
+
+<p class="big">Then how do they talk?</p>
+
+<p class="lead">Well, most payment machines follow an old 1987 format called <strong>ISO&nbsp;8583</strong> to encode the message and send it over a raw TLS connection, not HTTP!</p>
+
+<p>An HTTP request has a path, a verb like <code>GET</code> or <code>POST</code>, and a JSON body. An ISO&nbsp;8583 message has none of those. So what does it have instead?</p>
+
+<p>Let's find out by poking at a real one. Everything below is clickable.</p>
+
+<div class="note">
+  <strong>Where does NFC fit in?</strong>
+  The tap only happens between your card and the terminal, over a few centimetres. After that, the terminal packs what it learned (card number, amount, its own ID) into an ISO&nbsp;8583 message and sends it to the bank. That message is what we're opening up.
+</div>
+
+<!-- ============ 1 ============ -->
+<h2><span class="num">1</span>The same sale, in two languages</h2>
+<p>Here is a 150.00 card sale written both ways. Flip between them.</p>
+
+<div class="panel">
+  <div class="tabs" role="tablist" aria-label="Message format" data-el="tabs">
+    <button type="button" class="tab" role="tab" data-tab="http" aria-selected="true">HTTP + JSON</button>
+    <button type="button" class="tab" role="tab" data-tab="iso" aria-selected="false" tabindex="-1">ISO 8583</button>
+  </div>
+  <div data-el="tabPanel" role="tabpanel" aria-live="polite"></div>
+  <div class="bars" data-el="bars"></div>
+  <p class="small" style="margin:12px 0 0" data-el="ratioNote"></p>
+</div>
+
+<p>Same information, but the ISO&nbsp;8583 version has no field names, no quotes, no braces and no path. In 1987 these messages travelled over slow modem lines where every byte cost time and money, so the format sends only the values, in positions both sides agreed on beforehand.</p>
+
+<h3>So where did everything HTTP gives you go?</h3>
+<div class="tbl">
+<table>
+  <thead><tr><th>In HTTP you have</th><th>In ISO&nbsp;8583 it becomes</th></tr></thead>
+  <tbody>
+    <tr><td>Path + verb, like <code>POST /payments</code></td><td>The <strong>message type</strong> (MTI), e.g. <code>0200</code> = "financial request"</td></tr>
+    <tr><td>Status code, like <code>200 OK</code></td><td>A reply with message type <code>0210</code>, plus field 39, the response code (<code>00</code> = approved)</td></tr>
+    <tr><td>JSON keys, like <code>"amount"</code></td><td>Field <strong>numbers</strong>: amount is field 4</td></tr>
+    <tr><td>Which keys are present</td><td>The <strong>bitmap</strong></td></tr>
+    <tr><td>JSON values</td><td>Data elements in fixed formats</td></tr>
+    <tr><td><code>Content-Length</code> header</td><td>A <strong>length prefix</strong> in front of the message</td></tr>
+    <tr><td><code>Host</code> and routing headers</td><td>A transport header (TPDU on many terminal links)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>That length prefix matters more than it looks. A TLS or TCP connection is just a stream of bytes with no message boundaries. HTTP solves that with <code>Content-Length</code>. A raw ISO&nbsp;8583 link solves it by starting every message with its own byte count, so the receiver knows exactly how many bytes to read.</p>
+
+<!-- ============ 2 ============ -->
+<h2><span class="num">2</span>The trick: numbered boxes</h2>
+<p>Imagine a paper form with 128 numbered boxes. Box 2 is the card number. Box 4 is the amount. Box 41 is the terminal ID. ISO&nbsp;8583 calls the boxes <strong>data elements</strong>, or fields.</p>
+<p>A message never says the word "amount". It just fills in box 4. Every system that speaks ISO&nbsp;8583 owns the same numbered form (the spec), so the number is enough. These are the boxes our sale will use:</p>
+<div class="chips" data-el="boxes"></div>
+<p>A message fills only some of the boxes, so the receiver needs a way to know which ones. That is the <strong>bitmap</strong>, and we'll get to it. First, a one-minute detour, because everything from here on is measured in bytes.</p>
+
+<!-- ============ 3 ============ -->
+<h2><span class="num">3</span>Bits, bytes and hex in one minute</h2>
+<p>The wire carries <strong>bytes</strong>, and one byte is 8 bits. Raw bits are painful to read, so logs print each byte as <strong>two hex characters</strong>.</p>
+<p>Why two? One hex character (0 to 9, then A to F) has 16 possible values, which is exactly 4 bits. Two of them make 8 bits, one byte. Click the bits to see it:</p>
+
+<div class="panel">
+  <div class="bitrow" data-el="bitRow" role="group" aria-label="Eight bits of one byte"></div>
+  <div data-el="bitInfo" aria-live="polite"></div>
+</div>
+
+<p>Text works the same way: every character is one byte (its ASCII code). Type something:</p>
+<div class="panel">
+  <label for="iso-txt">Type up to 16 characters</label>
+  <input type="text" id="iso-txt" data-el="txtIn" value="TERM0001" maxlength="16" autocomplete="off" spellcheck="false">
+  <div class="chars" data-el="txtOut" aria-live="polite"></div>
+</div>
+
+<div class="note">
+  <strong>Remember this line.</strong>
+  1 byte = 8 bits = 2 hex characters. So a 64-bit bitmap is 8 bytes, which prints as 16 hex characters.
+</div>
+
+<p>In a real log you'll see something like <code>703C468008C09000</code>. The terminal never sent those characters. It sent 8 raw bytes, and the logging tool printed each byte as a pair of hex digits.</p>
+
+<!-- ============ 4 ============ -->
+<h2><span class="num">4</span>Walk through a real message</h2>
+<p>This is what a terminal sends for a 150.00 sale, as it appears in a log: one long string, with no separators. The message does not mark its own boundaries. Both sides know the rules, so we read it <strong>left to right</strong>: finish one piece, and it tells us where the next one starts.</p>
+<p>Press <strong>Start</strong>, then <strong>Next piece</strong>. You can also click any piece you've already passed.</p>
+
+<div class="panel">
+  <div class="hexbox" data-el="stepHex" aria-label="Raw message in hex"></div>
+  <div class="row">
+    <button type="button" class="btn" data-el="stepBack">Back</button>
+    <button type="button" class="btn primary" data-el="stepNext">Start</button>
+    <button type="button" class="btn" data-el="stepAll">Show all</button>
+    <button type="button" class="btn" data-el="stepReset">Reset</button>
+    <span class="prog" data-el="stepProg"></span>
+  </div>
+  <div class="detail" data-el="stepDetail" aria-live="polite"></div>
+</div>
+
+<h3>Three things to notice</h3>
+<ul>
+  <li>The first four pieces (length, transport header, message type, bitmap) have sizes you must <strong>know in advance</strong>. They come from the interface spec for your connection, not from the message.</li>
+  <li>Only the card number carries its own length. Everything else has a size fixed by the spec.</li>
+  <li>Numbers are packed as <strong>BCD</strong> (each hex digit is one decimal digit, so <code>4111</code> is simply the digits 4, 1, 1, 1). Text fields are <strong>ASCII</strong>, which looks like gibberish until you read each pair as a character. The spec says which is which.</li>
+</ul>
+
+<!-- ============ 5 ============ -->
+<h2><span class="num">5</span>The bitmap: the message's table of contents</h2>
+<p>The bitmap has <strong>one bit per box</strong>. A 1 means "this box is filled in this message". Sixty-four bits cover boxes 1 to 64, which is 8 bytes. Each row below is one byte, and its hex value is shown on the left. Click boxes to switch fields on and off:</p>
+
+<div class="panel">
+  <div data-el="bmGrid"></div>
+  <div style="margin-top:14px">
+    <div class="small">Bitmap as it would appear in a log</div>
+    <div class="bmhex" data-el="bmHex" aria-live="polite"></div>
+  </div>
+  <div class="row">
+    <button type="button" class="btn" data-el="bmSample">Load the sale from above</button>
+    <button type="button" class="btn" data-el="bmClear">Clear</button>
+  </div>
+  <div style="margin-top:12px">
+    <label for="iso-bm">Or paste a bitmap <span class="hint">(16 hex characters)</span></label>
+    <input type="text" id="iso-bm" data-el="bmIn" maxlength="16" autocomplete="off" spellcheck="false" placeholder="703C468008C09000">
+  </div>
+  <div class="chips" data-el="bmFields" aria-live="polite"></div>
+  <div class="note warn" data-el="bmNote" aria-live="polite"></div>
+</div>
+
+<h3>Why is the first hex character usually 0 to 7?</h3>
+<p>Bit 1 is not a field. It means <strong>"a second bitmap follows"</strong>. The first hex character holds bits 1 to 4, and bit 1 is its leftmost bit, worth 8.</p>
+<ul>
+  <li><strong>Bit 1 off</strong> (no second bitmap): the first character is <code>0xxx</code> in binary, so 0 to 7.</li>
+  <li><strong>Bit 1 on</strong> (second bitmap follows): the first character is <code>1xxx</code>, so 8 to F, and 8 more bytes of bitmap cover fields 65 to 128.</li>
+</ul>
+<p>Every other character of the bitmap can be anything from 0 to F. Try it above: switch on box 1 and watch the first character jump to 8 or higher.</p>
+
+<!-- ============ 6 ============ -->
+<h2><span class="num">6</span>Build your own message</h2>
+<p>Change the card, amount or IDs. Watch the bytes change, and notice that the length prefix updates by itself.</p>
+
+<div class="panel">
+  <div class="form">
+    <div><label for="iso-amt">Amount <span class="hint">(up to 2 decimals)</span></label><input type="text" id="iso-amt" data-el="inAmt" value="150.00" inputmode="decimal" autocomplete="off"></div>
+    <div><label for="iso-pan">Card number <span class="hint">(16 digits)</span></label><input type="text" id="iso-pan" data-el="inPan" value="4111111111111111" inputmode="numeric" autocomplete="off"></div>
+    <div><label for="iso-stan">Trace number <span class="hint">(6 digits)</span></label><input type="text" id="iso-stan" data-el="inStan" value="123456" inputmode="numeric" autocomplete="off"></div>
+    <div><label for="iso-tid">Terminal ID <span class="hint">(up to 8 characters)</span></label><input type="text" id="iso-tid" data-el="inTid" value="TERM0001" autocomplete="off" spellcheck="false"></div>
+    <div style="grid-column:1/-1"><label for="iso-mid">Merchant ID <span class="hint">(up to 15 characters)</span></label><input type="text" id="iso-mid" data-el="inMid" value="MERCHANT0000001" autocomplete="off" spellcheck="false"></div>
+  </div>
+  <div class="err" data-el="bErr" role="alert"></div>
+  <p class="small" style="margin:6px 0 4px" data-el="bSummary" aria-live="polite"></p>
+  <div class="hexbox" data-el="bHex"></div>
+  <div class="row"><button type="button" class="btn" data-el="bCopy">Copy hex</button></div>
+  <div class="tbl"><table><thead><tr><th>Piece</th><th>Hex</th><th>Bytes</th></tr></thead><tbody data-el="bTable"></tbody></table></div>
+</div>
+<p class="small">Try a short terminal ID such as <code>T1</code>: it gets padded with spaces (hex <code>20</code>) so the field stays exactly 8 bytes. Fixed sizes are the whole point.</p>
+
+<!-- ============ 7 ============ -->
+<h2><span class="num">7</span>The recipe, in four steps</h2>
+<ol>
+  <li><strong>Cut the front.</strong> Length prefix, transport header, message type and bitmap are fixed sizes from the spec. Count the bytes.</li>
+  <li><strong>Read the bitmap.</strong> Each 1 is a field that is present. If bit 1 is on, another bitmap follows.</li>
+  <li><strong>Read each field in order.</strong> The spec gives each one a rule: a fixed size, or a length in front of it. Finish one, and you know where the next starts.</li>
+  <li><strong>Check your work.</strong> The bytes you consumed after the prefix must equal the number in the prefix, with nothing left over. If not, the first garbled field points at the one before it, where your count went wrong.</li>
+</ol>
+
+<div class="note warn">
+  <strong>Real networks differ.</strong>
+  This message uses one common layout. Others use ASCII numbers instead of BCD, a different header, a 4-digit length, or a second bitmap. The rules above never change, but the interface spec for your connection decides every size. Everything here is made up for teaching: the card is a well-known test number and the PIN block is a dummy.
+</div>
+
+<p>Where to go next: the reply message (<code>0210</code>) and its response code in field 39, the long EMV chip-data field (55) that is itself a message inside the message, and how networks protect fields like the PIN block.</p>
+
+<footer>
+  <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+</footer>
+</article>
+
+<script>
+(function(){
+'use strict';
+const root=document.getElementById('iso8583');
+if(!root)return;
+const el=n=>root.querySelector('[data-el="'+n+'"]');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toHex=s=>{let o='';for(let i=0;i<s.length;i++)o+=('0'+s.charCodeAt(i).toString(16)).slice(-2);return o.toUpperCase();};
+const group4=s=>s.replace(/(.{4})(?=.)/g,'$1 ');
+const pairs=h=>h.replace(/(..)(?=.)/g,'$1 ');
+const padText=(s,n)=>{while(s.length<n)s+=' ';return s;};
+const byteLen=s=>(window.TextEncoder?new TextEncoder().encode(s).length:s.length);
+
+const NAMES={2:'Card number (PAN)',3:'Processing code',4:'Amount',7:'Transmission date/time',11:'Trace number (STAN)',12:'Local time',13:'Local date',14:'Expiry date',18:'Merchant category',22:'POS entry mode',23:'Card sequence no.',25:'POS condition code',35:'Track 2 data',37:'Retrieval reference',38:'Approval code',39:'Response code',41:'Terminal ID',42:'Merchant ID',43:'Merchant name/location',49:'Currency',52:'PIN block',55:'EMV chip data'};
+const SAMPLE_BITMAP='703C468008C09000';
+const SAMPLE={pan:'4111111111111111',amount:'150.00',stan:'123456',tid:'TERM0001',mid:'MERCHANT0000001'};
+
+/* ---------- build a message from parameters ---------- */
+function amountDigits(a){
+  const m=/^(\d{1,10})(?:\.(\d{1,2}))?$/.exec(a);
+  if(!m)return null;
+  return ('000000000000'+m[1]+((m[2]||'')+'00').slice(0,2)).slice(-12);
+}
+function buildMessage(p){
+  const ad=amountDigits(p.amount);
+  const tid=padText(p.tid,8), mid=padText(p.mid,15);
+  const money=ad.slice(0,10).replace(/^0+(?=\d)/,'')+'.'+ad.slice(10);
+  const fields=[
+    {de:2,name:'Card number (PAN)',hex:('0'+p.pan.length).slice(-2)+p.pan,
+      rule:'Variable length. One length byte says how many digits follow, then the digits are packed two per byte.',
+      dec:'Length byte '+p.pan.length+' means '+p.pan.length+' digits: '+group4(p.pan)+(p.pan==='4111111111111111'?' (a well-known test card number).':'.')},
+    {de:3,name:'Processing code',hex:'000000',rule:'Fixed: 6 digits, packed two per byte, so 3 bytes.',dec:'000000 = purchase from the default account.'},
+    {de:4,name:'Amount',hex:ad,rule:'Fixed: 12 digits, so 6 bytes. There is no decimal point: the last two digits are the minor units.',dec:money+' (the currency field says which currency).'},
+    {de:11,name:'Trace number (STAN)',hex:p.stan,rule:'Fixed: 6 digits, so 3 bytes.',dec:'The terminal\'s own counter for this request: '+p.stan+'.'},
+    {de:12,name:'Local time',hex:'221045',rule:'Fixed: hhmmss, so 3 bytes.',dec:'22:10:45.'},
+    {de:13,name:'Local date',hex:'1110',rule:'Fixed: MMDD, so 2 bytes.',dec:'10 November.'},
+    {de:14,name:'Card expiry',hex:'2912',rule:'Fixed: YYMM, so 2 bytes.',dec:'December 2029.'},
+    {de:18,name:'Merchant category',hex:'5411',rule:'Fixed: 4 digits, so 2 bytes.',dec:'5411 = grocery stores.'},
+    {de:22,name:'POS entry mode',hex:'0051',rule:'Fixed: 3 digits. An odd number of digits gets a leading zero so it fills 2 whole bytes.',dec:'051 = chip read, PIN capable. The first 0 is just padding.'},
+    {de:23,name:'Card sequence number',hex:'0001',rule:'Fixed: 3 digits, padded with a leading zero to 2 bytes.',dec:'001 = first card on the chip.'},
+    {de:25,name:'POS condition code',hex:'00',rule:'Fixed: 2 digits, so 1 byte.',dec:'00 = normal presentment.'},
+    {de:37,name:'Retrieval reference',hex:toHex('631422123456'),rule:'Fixed: 12 ASCII characters, so 12 bytes. Each byte is one character.',dec:'ASCII text "631422123456". For example 36 is "6" and 33 is "3".'},
+    {de:41,name:'Terminal ID',hex:toHex(tid),rule:'Fixed: 8 ASCII characters, so 8 bytes. Shorter IDs are padded with spaces (hex 20).',dec:'ASCII text "'+p.tid+'"'+(p.tid.length<8?' plus padding spaces.':'.')},
+    {de:42,name:'Merchant ID',hex:toHex(mid),rule:'Fixed: 15 ASCII characters, so 15 bytes. Shorter IDs are padded with spaces (hex 20).',dec:'ASCII text "'+p.mid+'"'+(p.mid.length<15?' plus padding spaces.':'.')},
+    {de:49,name:'Currency',hex:'0050',rule:'Fixed: 3 digits, padded with a leading zero to 2 bytes.',dec:'050 = Bangladeshi taka (BDT).'},
+    {de:52,name:'PIN block',hex:'1A2B3C4D5E6F7081',rule:'Fixed: 8 bytes of binary data. Not digits, not text.',dec:'An encrypted PIN block. This one is a dummy: never log or decode a real one.'}
+  ].map(f=>({tag:'DE '+f.de,name:f.name,hex:f.hex,rule:f.rule,dec:f.dec}));
+  const front=[
+    {tag:'TPDU',name:'Transport header (TPDU)',hex:'6000010000',rule:'Fixed: 5 bytes. This size is not visible in the message. It comes from the interface spec.',dec:'60 = header type, 0001 = destination address, 0000 = source address.'},
+    {tag:'MTI',name:'Message type (MTI)',hex:'0200',rule:'Fixed: 2 bytes (BCD) on this link. Some links send 4 ASCII characters instead.',dec:'0200 = financial request. In HTTP terms it is your verb and path in one: "please process this payment".'},
+    {tag:'BITMAP',name:'Primary bitmap',hex:SAMPLE_BITMAP,rule:'Fixed: 8 bytes. Bit 1 is off, so there is no second bitmap.',dec:'The 1 bits are fields 2, 3, 4, 11, 12, 13, 14, 18, 22, 23, 25, 37, 41, 42, 49 and 52. Those 16 fields follow, in this order.'}
+  ];
+  const body=front.concat(fields);
+  const total=body.reduce((a,s)=>a+s.hex.length/2,0);
+  const lenHex=('0000'+total.toString(16)).slice(-4).toUpperCase();
+  const len={tag:'LEN',name:'Length prefix',hex:lenHex,rule:'Fixed: 2 bytes, binary. It counts the bytes after itself, not itself. Your spec says whether that is the convention.',dec:'0x'+lenHex+' = '+total+'. So '+total+' more bytes follow.'};
+  const segs=[len].concat(body);
+  let off=0;
+  segs.forEach((s,i)=>{s.i=i;s.off=off;s.n=s.hex.length/2;off+=s.n;});
+  return {segs:segs,hex:segs.map(s=>s.hex).join(''),total:total,bytes:off};
+}
+
+/* ---------- 1. HTTP vs ISO ---------- */
+(function(){
+  const msg=buildMessage(SAMPLE);
+  const obj={pan:SAMPLE.pan,processingCode:'000000',amount:'150.00',stan:'123456',localTime:'221045',localDate:'1110',expiry:'2912',merchantCategory:'5411',entryMode:'051',cardSequence:'001',conditionCode:'00',retrievalRef:'631422123456',terminalId:'TERM0001',merchantId:'MERCHANT0000001',currency:'BDT',pinBlock:'1A2B3C4D5E6F7081'};
+  const jsonSize=byteLen(JSON.stringify(obj));
+  const http='POST /payments HTTP/1.1\nHost: bank.example.com\nContent-Type: application/json\nContent-Length: '+jsonSize+'\n\n'+JSON.stringify(obj,null,2);
+  const panels={
+    http:'<pre class="code">'+esc(http)+'</pre>',
+    iso:'<div class="code">'+msg.hex+'</div><p class="small" style="margin:8px 0 0">No path. No verb. No field names. Just '+msg.bytes+' bytes, shown here in hex.</p>'
+  };
+  const tabs=Array.from(el('tabs').querySelectorAll('.tab'));
+  function setTab(t){
+    tabs.forEach(b=>{const on=b.dataset.tab===t;b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;});
+    el('tabPanel').innerHTML=panels[t];
+  }
+  tabs.forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+  el('tabs').addEventListener('keydown',e=>{
+    if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+    const cur=tabs.findIndex(b=>b.getAttribute('aria-selected')==='true');
+    const nx=tabs[(cur+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];
+    setTab(nx.dataset.tab);nx.focus();
+  });
+  setTab('http');
+  const max=Math.max(jsonSize,msg.bytes);
+  el('bars').innerHTML=
+    '<div class="bar"><span>JSON body</span><span class="track"><span class="fill json" style="width:'+(jsonSize/max*100)+'%">'+jsonSize+' bytes</span></span></div>'+
+    '<div class="bar"><span>ISO 8583 message</span><span class="track"><span class="fill iso" style="width:'+(msg.bytes/max*100)+'%">'+msg.bytes+' bytes</span></span></div>';
+  el('ratioNote').textContent='The JSON is about '+(jsonSize/msg.bytes).toFixed(1)+'× bigger for the same 16 pieces of data (minified, so no extra spaces). A shorter JSON would still carry every field name.';
+})();
+
+/* ---------- 2. numbered boxes ---------- */
+(function(){
+  const used=[2,3,4,11,12,13,14,18,22,23,25,37,41,42,49,52];
+  el('boxes').innerHTML=used.map((n,i)=>'<span class="chip k'+(i%6)+'">'+n+'<i>'+esc(NAMES[n])+'</i></span>').join('');
+})();
+
+/* ---------- 3. bits and text ---------- */
+(function(){
+  const state=[0,1,1,1,0,0,0,0];
+  const row=el('bitRow');
+  state.forEach((b,k)=>{
+    const btn=document.createElement('button');
+    btn.type='button';btn.className='bit';btn.dataset.k=k;
+    btn.innerHTML='<span class="bv"></span><span class="bw">'+(128>>k)+'</span>';
+    btn.addEventListener('click',()=>{state[k]=state[k]?0:1;update();});
+    row.appendChild(btn);
+  });
+  function update(){
+    Array.from(row.children).forEach((btn,k)=>{
+      btn.classList.toggle('on',!!state[k]);
+      btn.setAttribute('aria-pressed',state[k]?'true':'false');
+      btn.setAttribute('aria-label','Bit worth '+(128>>k)+', currently '+state[k]);
+      btn.firstChild.textContent=state[k];
+    });
+    const hi=state[0]*8+state[1]*4+state[2]*2+state[3];
+    const lo=state[4]*8+state[5]*4+state[6]*2+state[7];
+    const v=hi*16+lo;
+    const hx=n=>n.toString(16).toUpperCase();
+    const asText=(v>=33&&v<127)?'the character "'+esc(String.fromCharCode(v))+'"':(v===32?'a space':'not a printable character');
+    el('bitInfo').innerHTML=
+      '<div class="eq">'+state.slice(0,4).join('')+' → <b>'+hx(hi)+'</b> &nbsp;&nbsp; '+state.slice(4).join('')+' → <b>'+hx(lo)+'</b></div>'+
+      '<p style="margin:8px 0 0">This byte prints as <code>'+hx(hi)+hx(lo)+'</code> in a log. Its value is '+v+', which as text is '+asText+'.</p>';
+  }
+  update();
+
+  const inp=el('txtIn');
+  function renderTxt(){
+    const s=inp.value.slice(0,16).replace(/[^\x20-\x7E]/g,'?');
+    el('txtOut').innerHTML=s.length?Array.from(s).map(c=>'<span class="ch"><b>'+(c===' '?'␠':esc(c))+'</b><i>'+toHex(c)+'</i></span>').join(''):'<span class="small">Type something above.</span>';
+  }
+  inp.addEventListener('input',renderTxt);
+  renderTxt();
+})();
+
+/* ---------- 4. step-through ---------- */
+(function(){
+  const m=buildMessage(SAMPLE), n=m.segs.length;
+  const st={step:-1};
+  const hexBox=el('stepHex'), detail=el('stepDetail');
+  const bBack=el('stepBack'), bNext=el('stepNext'), bAll=el('stepAll'), bReset=el('stepReset'), prog=el('stepProg');
+  function span(s){return s.n===1?'Byte '+s.off:'Bytes '+s.off+' to '+(s.off+s.n-1);}
+  function render(){
+    const i=st.step;
+    let h='';
+    for(let j=0;j<=i;j++){
+      const s=m.segs[j];
+      h+='<span class="seg k'+(j%6)+(j===i?' cur':'')+'" data-i="'+j+'" tabindex="0" role="button" aria-label="'+esc(s.name)+'">'+s.hex+'</span>';
+    }
+    if(i<n-1)h+='<span class="rest">'+m.segs.slice(i+1).map(s=>s.hex).join('')+'</span>';
+    hexBox.innerHTML=h;
+    bBack.disabled=i<0;
+    bNext.disabled=i>=n-1;
+    bNext.textContent=i<0?'Start':'Next piece';
+    bAll.disabled=i>=n-1;
+    bReset.disabled=i<0;
+    prog.textContent=i<0?'Not started':'Piece '+(i+1)+' of '+n;
+    if(i<0){
+      detail.innerHTML='<p class="small" style="margin:0">That is the whole message: '+m.bytes+' bytes, or '+(m.bytes*2)+' hex characters, with no visible structure. The grey text is what we have not read yet.</p>';
+      return;
+    }
+    const s=m.segs[i];
+    let html=
+      '<div class="dtitle"><span class="chip k'+(i%6)+'">'+esc(s.tag)+'</span> '+esc(s.name)+'</div>'+
+      '<div class="dhex">'+pairs(s.hex)+'</div>'+
+      '<dl><dt>Position</dt><dd>'+span(s)+' of '+m.bytes+', counting from 0 ('+s.n+' byte'+(s.n>1?'s':'')+')</dd>'+
+      '<dt>How we knew its size</dt><dd>'+esc(s.rule)+'</dd>'+
+      '<dt>Decoded</dt><dd>'+esc(s.dec)+'</dd></dl>';
+    if(i===n-1){
+      const fieldBytes=m.total-15;
+      html+='<div class="note ok"><strong>Check:</strong> 5 + 2 + 8 + '+fieldBytes+' = '+m.total+' bytes after the length prefix, and the prefix says '+m.total+'. Every 1 in the bitmap was used and nothing is left over, so the breakdown is correct.</div>';
+    }
+    detail.innerHTML=html;
+  }
+  bNext.addEventListener('click',()=>{if(st.step<n-1){st.step++;render();}});
+  bBack.addEventListener('click',()=>{if(st.step>=0){st.step--;render();}});
+  bAll.addEventListener('click',()=>{st.step=n-1;render();});
+  bReset.addEventListener('click',()=>{st.step=-1;render();});
+  function jump(t){const seg=t.closest('.seg');if(seg){st.step=+seg.dataset.i;render();}}
+  hexBox.addEventListener('click',e=>jump(e.target));
+  hexBox.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();jump(e.target);}});
+  render();
+})();
+
+/* ---------- 5. bitmap explorer ---------- */
+(function(){
+  const bits=new Array(64).fill(0);
+  const grid=el('bmGrid'), hexOut=el('bmHex'), input=el('bmIn'), fieldsOut=el('bmFields'), note=el('bmNote');
+  const cells=[], labs=[];
+  for(let r=0;r<8;r++){
+    const row=document.createElement('div');row.className='brow';
+    const lab=document.createElement('span');lab.className='blab';row.appendChild(lab);labs.push(lab);
+    const wrap=document.createElement('div');wrap.className='bcells';
+    for(let c=0;c<8;c++){
+      const k=r*8+c;
+      const b=document.createElement('button');
+      b.type='button';b.className='cell'+(k===0?' flag':'');b.textContent=k+1;
+      b.title=k===0?'Bit 1: a second bitmap follows':'Field '+(k+1)+(NAMES[k+1]?': '+NAMES[k+1]:'');
+      b.addEventListener('click',()=>{bits[k]=bits[k]?0:1;render(false);});
+      wrap.appendChild(b);cells.push(b);
+    }
+    row.appendChild(wrap);grid.appendChild(row);
+  }
+  const hexToBits=h=>{const o=[];for(let i=0;i<16;i++){const v=parseInt(h[i],16);for(let k=3;k>=0;k--)o.push((v>>k)&1);}return o;};
+  const bitsToHex=b=>{let h='';for(let i=0;i<64;i+=4)h+=(b[i]*8+b[i+1]*4+b[i+2]*2+b[i+3]).toString(16);return h.toUpperCase();};
+  function setBits(arr){for(let i=0;i<64;i++)bits[i]=arr[i];}
+  function render(syncInput){
+    const hx=bitsToHex(bits);
+    cells.forEach((b,k)=>{b.classList.toggle('on',!!bits[k]);b.setAttribute('aria-pressed',bits[k]?'true':'false');});
+    labs.forEach((l,r)=>{l.textContent=hx.slice(r*2,r*2+2);});
+    hexOut.innerHTML='<span class="hl">'+hx[0]+'</span>'+hx.slice(1);
+    if(syncInput!==false)input.value=hx;
+    const on=[];for(let k=1;k<64;k++)if(bits[k])on.push(k+1);
+    fieldsOut.innerHTML=on.length?on.map((f,i)=>'<span class="chip k'+(i%6)+'">'+f+'<i>'+esc(NAMES[f]||'(no name in this article)')+'</i></span>').join(''):'<span class="small">No fields switched on.</span>';
+    const first=parseInt(hx[0],16);
+    const bin=('000'+first.toString(2)).slice(-4);
+    note.innerHTML=bits[0]
+      ?'<strong>Bit 1 is on.</strong> The first hex character is <code>'+hx[0]+'</code> (binary <code>'+bin+'</code>), which is 8 or more. A second 8-byte bitmap follows this one and covers fields 65 to 128.'
+      :'<strong>Bit 1 is off.</strong> The first hex character is <code>'+hx[0]+'</code> (binary <code>'+bin+'</code>), so it cannot be above 7. There is no second bitmap.';
+  }
+  el('bmSample').addEventListener('click',()=>{setBits(hexToBits(SAMPLE_BITMAP));render();});
+  el('bmClear').addEventListener('click',()=>{setBits(new Array(64).fill(0));render();});
+  input.addEventListener('input',()=>{
+    const v=input.value.trim();
+    if(/^[0-9a-fA-F]{16}$/.test(v)){setBits(hexToBits(v));input.removeAttribute('aria-invalid');render(false);}
+    else input.setAttribute('aria-invalid','true');
+  });
+  setBits(hexToBits(SAMPLE_BITMAP));
+  render();
+})();
+
+/* ---------- 6. builder ---------- */
+(function(){
+  const f={amt:el('inAmt'),pan:el('inPan'),stan:el('inStan'),tid:el('inTid'),mid:el('inMid')};
+  let lastHex='';
+  function render(){
+    const v={amount:f.amt.value.trim(),pan:f.pan.value.replace(/\s+/g,''),stan:f.stan.value.trim(),tid:f.tid.value,mid:f.mid.value};
+    const checks=[
+      [f.amt,/^\d{1,10}(\.\d{1,2})?$/.test(v.amount),'Amount: digits with up to 2 decimals.'],
+      [f.pan,/^\d{16}$/.test(v.pan),'Card number: exactly 16 digits.'],
+      [f.stan,/^\d{6}$/.test(v.stan),'Trace number: exactly 6 digits.'],
+      [f.tid,/^[\x20-\x7E]{1,8}$/.test(v.tid),'Terminal ID: 1 to 8 plain characters.'],
+      [f.mid,/^[\x20-\x7E]{1,15}$/.test(v.mid),'Merchant ID: 1 to 15 plain characters.']
+    ];
+    const bad=checks.filter(c=>!c[1]);
+    checks.forEach(c=>{if(c[1])c[0].removeAttribute('aria-invalid');else c[0].setAttribute('aria-invalid','true');});
+    el('bErr').textContent=bad.map(c=>c[2]).join(' ');
+    if(bad.length)return;
+    const m=buildMessage(v);
+    lastHex=m.hex;
+    el('bSummary').textContent='Length prefix '+m.segs[0].hex+' = '+m.total+' bytes follow. Whole message: '+m.bytes+' bytes.';
+    el('bHex').innerHTML=m.segs.map(s=>'<span class="seg k'+(s.i%6)+'" style="cursor:default">'+s.hex+'</span>').join('');
+    el('bTable').innerHTML=m.segs.map(s=>'<tr><td><span class="chip k'+(s.i%6)+'">'+esc(s.tag)+'</span> '+esc(s.name)+'</td><td><code>'+s.hex+'</code></td><td>'+s.n+'</td></tr>').join('');
+  }
+  Object.keys(f).forEach(k=>f[k].addEventListener('input',render));
+  const copyBtn=el('bCopy');
+  copyBtn.addEventListener('click',()=>{
+    const done=ok=>{copyBtn.textContent=ok?'Copied':'Copy failed';setTimeout(()=>{copyBtn.textContent='Copy hex';},1500);};
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(lastHex).then(()=>done(true),()=>done(false));}
+      else{const t=document.createElement('textarea');t.value=lastHex;document.body.appendChild(t);t.select();const ok=document.execCommand('copy');document.body.removeChild(t);done(ok);}
+    }catch(e){done(false);}
+  });
+  render();
+})();
+})();
+</script>
+<script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+</body>
+</html>
