@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Blog · Md. Sayeed Rahman</title>
   <meta name="description" content="Interactive articles for learning software engineering concepts visually.">
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../styles.css?v=10">
 </head>
 <body>
   <header class="topbar">
@@ -26,9 +26,16 @@
     <h1>Learning doesn't have to be boring.</h1>
     <p class="meta">Learn by feeling it.</p>
 
-    <!-- Add a new post: copy the card below and point it at blog/<slug>/ -->
-    <div class="cards cards-full">
-      <a class="card project" href="how-a-website-loads/index.html">
+    <div class="filters" role="group" aria-label="Filter by category">
+      <button type="button" class="is-active" data-filter="all">All</button>
+      <button type="button" data-filter="networking">Networking</button>
+      <button type="button" data-filter="algorithm">Algorithm</button>
+      <button type="button" data-filter="payment-systems">Payment systems</button>
+    </div>
+
+    <!-- Add a new post: copy the card below, set data-category, and point it at blog/<slug>/ -->
+    <div class="cards cards-full" id="posts">
+      <a class="card project" href="how-a-website-loads/index.html" data-category="networking">
         <div>
           <h3>What happens when you open a website</h3>
           <p class="kind">Networking · Part 1 of 4 · Interactive</p>
@@ -36,7 +43,7 @@
         </div>
         <span class="arrow" aria-hidden="true">→</span>
       </a>
-      <a class="card project" href="plain-http-unsafe/index.html">
+      <a class="card project" href="plain-http-unsafe/index.html" data-category="networking">
         <div>
           <h3>Plain HTTP and why it's unsafe</h3>
           <p class="kind">Networking · Part 2 of 4 · Interactive</p>
@@ -44,7 +51,7 @@
         </div>
         <span class="arrow" aria-hidden="true">→</span>
       </a>
-      <a class="card project" href="encryption-basics/index.html">
+      <a class="card project" href="encryption-basics/index.html" data-category="networking">
         <div>
           <h3>Encryption basics: locks, keys and secrets</h3>
           <p class="kind">Networking · Part 3 of 4 · Interactive</p>
@@ -52,7 +59,7 @@
         </div>
         <span class="arrow" aria-hidden="true">→</span>
       </a>
-      <a class="card project" href="tls-journey/index.html">
+      <a class="card project" href="tls-journey/index.html" data-category="networking">
         <div>
           <h3>The TLS journey</h3>
           <p class="kind">Networking · Part 4 of 4 · Interactive</p>
@@ -60,7 +67,7 @@
         </div>
         <span class="arrow" aria-hidden="true">→</span>
       </a>
-      <a class="card project" href="binary-search/index.html">
+      <a class="card project" href="binary-search/index.html" data-category="algorithm">
         <div>
           <h3>Binary search, step by step</h3>
           <p class="kind">Algorithms · Interactive</p>
@@ -69,6 +76,7 @@
         <span class="arrow" aria-hidden="true">→</span>
       </a>
     </div>
+    <p class="filter-empty" id="filter-empty" hidden>No posts in this category yet.</p>
 
     <footer>
       <span>© <span id="year"></span> Md. Sayeed Rahman</span>
@@ -77,6 +85,28 @@
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    (function () {
+      var filters = document.querySelector(".filters");
+      var cards = document.querySelectorAll("#posts [data-category]");
+      var empty = document.getElementById("filter-empty");
+
+      filters.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-filter]");
+        if (!btn) return;
+        var cat = btn.getAttribute("data-filter");
+        Array.prototype.forEach.call(filters.querySelectorAll("[data-filter]"), function (b) {
+          b.classList.toggle("is-active", b === btn);
+        });
+        var shown = 0;
+        Array.prototype.forEach.call(cards, function (card) {
+          var match = cat === "all" || card.getAttribute("data-category") === cat;
+          card.hidden = !match;
+          if (match) shown += 1;
+        });
+        empty.hidden = shown > 0;
+      });
+    })();
   </script>
 </body>
 </html>

@@ -85,6 +85,25 @@ h1 {
   color: var(--muted);
 }
 
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 24px; }
+.filters button {
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.filters button:hover { color: var(--ink); }
+.filters button.is-active {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.filter-empty { margin: 0 0 12px; }
+
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .btn {
   display: inline-flex;
@@ -132,6 +151,7 @@ section p:last-child { margin-bottom: 0; }
   transition: border-color 0.15s, transform 0.15s;
 }
 .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card[hidden] { display: none; }
 .arrow { color: var(--muted); transition: color 0.15s, transform 0.15s; }
 .card:hover .arrow { color: var(--accent); transform: translate(2px, -2px); }
 
