@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Why is PIN encrypted before it travels through the network? · Md. Sayeed Rahman</title>
+<meta name="description" content="Why a PIN is encrypted before it leaves the phone, which card fields need the same treatment, and how to store them in MySQL without losing the data when a key rotates.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="../../styles.css?v=10">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: one reading column under a sticky step bar. Each lesson ends in a hands-on lab panel set apart from the prose. The hero borrows the fine wave pattern printed inside PIN mailer envelopes. */
+:root{
+  --bg:#F2F5F8;
+  --surface:#FFFFFF;
+  --surface-2:#E8EEF4;
+  --fg:#12202E;
+  --muted:#51647A;
+  --line:#CBD6E2;
+  --accent:#2547B5;
+  --accent-ink:#FFFFFF;
+  --accent-soft:#DDE5FB;
+  --danger:#B42318;
+  --danger-soft:#FBE4E1;
+  --ok:#17784A;
+  --ok-soft:#DDF3E6;
+  --warn:#9A5B00;
+  --warn-soft:#FBEBCB;
+  --ink-line:rgba(37,71,181,.18);
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1722;
+    --surface:#14212F;
+    --surface-2:#1B2B3C;
+    --fg:#E6EDF5;
+    --muted:#9AAEC4;
+    --line:#2A3D52;
+    --accent:#8FA8FF;
+    --accent-ink:#0D1722;
+    --accent-soft:#1F2E57;
+    --danger:#FF8A7E;
+    --danger-soft:#3A1B1A;
+    --ok:#5ED39A;
+    --ok-soft:#12301F;
+    --warn:#F2B45A;
+    --warn-soft:#3A2B0D;
+    --ink-line:rgba(143,168,255,.2);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1722;
+  --surface:#14212F;
+  --surface-2:#1B2B3C;
+  --fg:#E6EDF5;
+  --muted:#9AAEC4;
+  --line:#2A3D52;
+  --accent:#8FA8FF;
+  --accent-ink:#0D1722;
+  --accent-soft:#1F2E57;
+  --danger:#FF8A7E;
+  --danger-soft:#3A1B1A;
+  --ok:#5ED39A;
+  --ok-soft:#12301F;
+  --warn:#F2B45A;
+  --warn-soft:#3A2B0D;
+  --ink-line:rgba(143,168,255,.2);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{scroll-padding-top:calc(60px + env(safe-area-inset-top,0px))}
+img{max-width:100%}
+[hidden]:not([hidden=until-found i]){display:none!important}
+body{background:var(--bg);color:var(--fg);font:400 16px/1.65 var(--font-body);-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{width:100%;max-width:860px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font:500 .9em var(--font-mono);background:var(--surface-2);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+.small{font-size:13px;color:var(--muted);margin:0}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
+.hero .wrap{position:relative;padding-block:52px 38px}
+.mailer{position:absolute;inset:0;width:100%;height:100%;-webkit-mask-image:linear-gradient(to bottom,#000 15%,transparent 100%);mask-image:linear-gradient(to bottom,#000 15%,transparent 100%)}
+.mailer path{fill:none;stroke:var(--ink-line);stroke-width:1}
+.eyebrow{font:600 12px/1.4 var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+h1{font:700 clamp(2.5rem,8vw,4.25rem)/1.02 var(--font-display);letter-spacing:-.025em;margin:0 0 18px;text-wrap:balance}
+.lede{font-size:clamp(1.05rem,2.6vw,1.25rem);line-height:1.55;max-width:56ch;margin:0 0 18px}
+.meta{font:500 13px/1.5 var(--font-mono);color:var(--muted);margin:0}
+
+/* Step bar */
+.steps{position:sticky;top:calc(60px + env(safe-area-inset-top,0px));z-index:9;background:var(--bg);border-bottom:1px solid var(--line)}
+.steps ol{position:relative;list-style:none;margin:0;padding:8px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.steps ol::-webkit-scrollbar{display:none}
+.steps a{display:flex;align-items:center;gap:8px;white-space:nowrap;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);text-decoration:none;font:500 13px/1.2 var(--font-body);background:var(--surface)}
+.steps a b{font:600 12px var(--font-mono);color:var(--accent)}
+.steps a:hover{border-color:var(--accent)}
+.steps a[aria-current="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.steps a[aria-current="true"] b{color:var(--accent-ink)}
+
+/* Lessons */
+.lesson{padding-block:48px 40px;scroll-margin-top:calc(120px + env(safe-area-inset-top,0px))}
+.lesson + .lesson{border-top:1px solid var(--line)}
+.kicker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font:600 12px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.kicker .num{font:700 13px var(--font-mono);letter-spacing:0;color:var(--accent-ink);background:var(--accent);padding:2px 8px;border-radius:6px}
+h2{font:700 clamp(1.6rem,4.6vw,2.25rem)/1.12 var(--font-display);letter-spacing:-.015em;margin:0 0 16px;text-wrap:balance}
+h3{font:600 13px/1.3 var(--font-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.prose p{max-width:65ch;margin:0 0 14px}
+.prose ol{max-width:65ch;padding-left:1.3em;margin:0 0 14px}
+.prose li{margin-bottom:6px}
+
+/* Lab panels */
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:22px 0;font-size:14px;line-height:1.5}
+.lab-bar{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;justify-content:space-between}
+.lab-tag{font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0 0 12px}
+
+.btn{font:600 14px/1.2 var(--font-body);padding:9px 14px;min-height:40px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{background:var(--danger);color:var(--bg);border-color:var(--danger)}
+.btn.small-btn{padding:5px 10px;min-height:32px;font-size:13px}
+.btn.danger-ghost{background:transparent;color:var(--danger);border-color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg-btn{font:600 13px/1.2 var(--font-body);padding:10px 13px;border:0;background:var(--surface);color:var(--fg);cursor:pointer}
+.seg-btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.field input{font:500 16px var(--font-mono);padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0;width:100%}
+.field.narrow{width:120px}
+.field.grow{flex:1 1 220px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pill{display:inline-block;font:600 12px/1.3 var(--font-body);padding:3px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.pill.bad{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}
+.pill.ok{color:var(--ok);background:var(--ok-soft);border-color:var(--ok)}
+.pill.warn{color:var(--warn);background:var(--warn-soft);border-color:var(--warn)}
+.pill.mute{color:var(--muted);background:var(--surface-2)}
+.hint{color:var(--danger);font-weight:600;margin:10px 0 0}
+
+/* Step 1: hops */
+.hops{list-style:none;margin:16px 0 0;padding:0}
+.hop{position:relative;padding:12px 0 12px 26px}
+.hop::before{content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--line)}
+.hop:first-child::before{top:24px}
+.hop:last-child::before{bottom:calc(100% - 24px)}
+.dot{position:absolute;left:0;top:18px;width:12px;height:12px;border-radius:50%;background:var(--muted)}
+.hop.bad .dot{background:var(--danger)}
+.hop.ok .dot{background:var(--ok)}
+.hop-top{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.hop-top strong{font-size:15px}
+.hop-top .note{color:var(--muted);font-size:13px}
+.hop-top .pill{margin-left:auto}
+.sees{display:block;margin-top:6px;padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:6px;font:400 13px/1.45 var(--font-mono);overflow-wrap:anywhere}
+.hop.bad .sees{border-left-color:var(--danger)}
+.hop.ok .sees{border-left-color:var(--ok)}
+.tally{margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:15px}
+.tally strong{font:700 22px var(--font-display);margin-right:4px}
+
+/* Step 2: PIN block */
+.step{font:600 13px var(--font-body);margin:18px 0 6px}
+.step:first-of-type{margin-top:14px}
+.nibs{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:3px;max-width:520px}
+.nib{aspect-ratio:3/4;display:grid;place-items:center;border-radius:4px;font:500 clamp(11px,3.4vw,15px) var(--font-mono);background:var(--surface-2);border:1px solid var(--line)}
+.nib.ctl,.nib.len{background:var(--warn-soft);border-color:var(--warn)}
+.nib.pin{background:var(--accent-soft);border-color:var(--accent)}
+.nib.pad{color:var(--muted)}
+.nib.res{background:var(--bg);border-color:var(--fg)}
+.nib.diff{background:var(--danger-soft);border-color:var(--danger);color:var(--danger)}
+.compare{margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+
+/* Step 3: sorting */
+.fields{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:0}
+.fieldrow{padding:12px 0;border-top:1px solid var(--line)}
+.fieldrow:first-child{border-top:0}
+.fr-top{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.fr-top strong{font-size:15px}
+.fr-top code{background:var(--bg)}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.opts .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fb{margin:8px 0 0;font-size:13px}
+.fb.ok{color:var(--ok)}
+.fb.bad{color:var(--danger)}
+.fb.almost{color:var(--warn)}
+.fb b{font-weight:600}
+.score{margin:0;font-weight:600}
+
+/* Step 4 and 5: keys */
+.split{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:20px}
+.stack{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.keyring{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.keyring li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.kid{font:600 13px var(--font-mono)}
+.used{color:var(--muted);font-size:12px;margin-right:auto}
+.tablewrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:8px}
+table.rows{width:100%;border-collapse:collapse;min-width:520px;font-size:13px}
+table.rows th{font:600 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;background:var(--surface-2)}
+table.rows td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+td.stored{font:400 12px var(--font-mono);overflow-wrap:anywhere;max-width:240px}
+.res-ok{font:600 13px var(--font-mono);color:var(--ok)}
+.res-bad{font-weight:600;color:var(--danger)}
+.msg{margin:12px 0 0;min-height:1.5em}
+.dump{font:400 12px/1.5 var(--font-mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-x:auto;margin:6px 0 12px;white-space:pre}
+.dump.bad{color:var(--danger);border-color:var(--danger)}
+.verdict{margin:6px 0 0;padding:10px 12px;border-radius:8px;border:1px solid;font-weight:600}
+.verdict.bad{color:var(--danger);background:var(--danger-soft);border-color:var(--danger)}
+.verdict.ok{color:var(--ok);background:var(--ok-soft);border-color:var(--ok)}
+.steal-out{margin-top:16px}
+
+/* Step 6: flow */
+.flow-nav{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.flow-nav p{margin:0;font:600 13px var(--font-mono);color:var(--muted)}
+#flow-title{font:700 20px/1.25 var(--font-display);letter-spacing:-.01em;text-transform:none;color:var(--fg);margin:16px 0 6px}
+#flow-text{margin:0;max-width:62ch}
+.actors{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.actor{border:1px solid var(--line);border-radius:8px;padding:10px;min-height:104px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.actor strong{font-size:14px}
+.actor .lbl{font-size:12px;line-height:1.35}
+.actor .ico{height:18px;display:block}
+.actor.st-idle{opacity:.55;background:var(--bg)}
+.actor.st-clear{border-color:var(--warn);background:var(--warn-soft)}
+.actor.st-enc{border-color:var(--ok);background:var(--ok-soft)}
+.actor.st-token{border-color:var(--accent);background:var(--accent-soft)}
+.actor.st-key{border-color:var(--fg);background:var(--surface-2)}
+.legend{margin:14px 0 0;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid}
+.legend .l-clear{background:var(--warn-soft);border-color:var(--warn)}
+.legend .l-enc{background:var(--ok-soft);border-color:var(--ok)}
+.legend .l-token{background:var(--accent-soft);border-color:var(--accent)}
+.legend .l-key{background:var(--surface-2);border-color:var(--fg)}
+
+/* Checklist */
+.checklist{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.checklist label{display:flex;gap:12px;align-items:flex-start;padding:8px 4px;cursor:pointer}
+.checklist input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.foot{border-top:1px solid var(--line);padding-block:26px 40px;color:var(--muted);font-size:14px}
+.foot p{max-width:65ch;margin:0 0 8px}
+
+.topbar{z-index:11;background:color-mix(in srgb,var(--bg) 86%,transparent);border-bottom-color:var(--line)}
+.topbar .brand{background:var(--fg);color:var(--bg)}
+.topbar nav a{color:var(--muted)}
+.topbar nav a:hover{color:var(--fg)}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+<header class="hero">
+  <svg class="mailer" aria-hidden="true" focusable="false">
+    <defs>
+      <pattern id="waveA" width="64" height="20" patternUnits="userSpaceOnUse"><path d="M0 10 C 16 0, 48 20, 64 10"/></pattern>
+      <pattern id="waveB" width="48" height="14" patternUnits="userSpaceOnUse"><path d="M0 7 C 12 14, 36 0, 48 7"/></pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#waveA)"/>
+    <rect width="100%" height="100%" fill="url(#waveB)"/>
+  </svg>
+  <div class="wrap">
+    <p class="eyebrow">Interactive tutorial · beginner to intermediate</p>
+    <h1>Why is PIN encrypted before it travels through the network?</h1>
+    <p class="lede">Why a PIN is encrypted before it leaves the phone, which card fields need the same treatment, and how to store them in MySQL without losing the data when a key rotates.</p>
+    <p class="meta">Six steps, five labs, test card numbers only. Everything runs in your browser.</p>
+  </div>
+</header>
+
+<nav class="steps" aria-label="Tutorial steps">
+  <div class="wrap">
+    <ol>
+      <li><a href="#path" data-target="path"><b>1</b>The path</a></li>
+      <li><a href="#pinblock" data-target="pinblock"><b>2</b>PIN block</a></li>
+      <li><a href="#fields-step" data-target="fields-step"><b>3</b>Card fields</a></li>
+      <li><a href="#rotation" data-target="rotation"><b>4</b>Key rotation</a></li>
+      <li><a href="#keyhome" data-target="keyhome"><b>5</b>Key storage</a></li>
+      <li><a href="#flow" data-target="flow"><b>6</b>Full flow</a></li>
+    </ol>
+  </div>
+</nav>
+
+<main>
+
+<section class="lesson" id="path">
+  <div class="wrap prose">
+    <p class="kicker"><span class="num">1</span> Beginner</p>
+    <h2>HTTPS protects the road, not every stop</h2>
+    <p>TLS keeps strangers from reading traffic between the phone and the first server it reaches. That first server is usually a CDN, a WAF, or a load balancer, and the TLS connection ends there. From that point the request travels through your network as plain JSON.</p>
+    <p>Every stop on the way can read the body. Request logs, error trackers, and crash dumps often save it. A PIN that is readable at any of those stops is exposed to everyone who can read them.</p>
+    <p>Encrypting the PIN on the phone with a public key changes this. Only the hardware security module (HSM) that holds the private key can open it. Switch between both modes and type your own PIN.</p>
+
+    <div class="lab" id="lab-path">
+      <p class="lab-tag">Lab 1 · Follow the PIN</p>
+      <div class="lab-bar">
+        <div class="seg" role="group" aria-label="How the PIN is sent">
+          <button type="button" class="seg-btn" id="mode-plain" aria-pressed="true">Plain JSON over HTTPS</button>
+          <button type="button" class="seg-btn" id="mode-enc" aria-pressed="false">Encrypted on the phone</button>
+        </div>
+        <label class="field narrow"><span>PIN to send (test)</span><input id="path-pin" inputmode="numeric" maxlength="6" autocomplete="off" value="4821"></label>
+      </div>
+      <p class="hint" id="path-hint" hidden>Use 4 to 6 digits for a realistic PIN.</p>
+      <ol class="hops" id="hops" aria-live="polite"></ol>
+      <p class="tally" id="path-tally"></p>
+    </div>
+
+    <p>PCI PIN security rules ask for the same thing: the PIN stays encrypted from the moment it is entered until it reaches the HSM, and it is never stored.</p>
+  </div>
+</section>
+
+<section class="lesson" id="pinblock">
+  <div class="wrap prose">
+    <p class="kicker"><span class="num">2</span> Beginner</p>
+    <h2>What actually gets encrypted: the PIN block</h2>
+    <p>A four digit PIN has only 10,000 possible values. If you encrypted the bare digits, everyone who chose 4821 would produce the same ciphertext, and a captured value could be replayed on another card.</p>
+    <p>The ISO 9564 PIN block fixes this by mixing the PIN with the card number before encryption. Format 0 builds two 16 digit hex strings and XORs them. Change the card and the block changes, even when the PIN stays the same.</p>
+
+    <div class="lab" id="lab-block">
+      <p class="lab-tag">Lab 2 · Build a format 0 PIN block</p>
+      <div class="lab-bar">
+        <label class="field narrow"><span>PIN (test)</span><input id="pb-pin" inputmode="numeric" maxlength="6" autocomplete="off" value="4821"></label>
+        <label class="field grow"><span>Card A number (test)</span><input id="pb-pan" inputmode="numeric" maxlength="19" autocomplete="off" value="4111111111111111"></label>
+      </div>
+      <div class="chips" role="group" aria-label="Sample test card numbers">
+        <button type="button" class="btn small-btn" data-pan="4111111111111111">Visa test</button>
+        <button type="button" class="btn small-btn" data-pan="5555555555554444">Mastercard test</button>
+        <button type="button" class="btn small-btn" data-pan="378282246310005">Amex test</button>
+      </div>
+      <p class="hint" id="pb-err" role="alert" hidden></p>
+      <div id="pb-out"></div>
+    </div>
+
+    <p>In production this happens inside the HSM or the PIN pad, never in app code on a server. Format 3 swaps the fixed F padding for random values, and format 4 is the AES version. Because the block is tied to its card number, a copy of it is not useful on another card.</p>
+  </div>
+</section>
+
+<section class="lesson" id="fields-step">
+  <div class="wrap prose">
+    <p class="kicker"><span class="num">3</span> Beginner</p>
+    <h2>Sort the card fields</h2>
+    <p>Not every field needs the same protection. For each field, choose what you would do with it in your database. A wrong answer gives a hint, so you can keep trying.</p>
+
+    <div class="lab" id="lab-sort">
+      <p class="lab-tag">Lab 3 · Never, encrypt, or plain</p>
+      <div class="lab-bar">
+        <p class="score" id="sort-score" aria-live="polite"></p>
+        <button type="button" class="btn small-btn" id="sort-reset">Start over</button>
+      </div>
+      <ul class="fields" id="fields"></ul>
+    </div>
+
+    <p>In transit, treat PAN, expiry, and CVV like the PIN and encrypt the payload, because TLS ends at your gateway. Whether Google Wallet needs the CVV depends on the flow. A user typing a card into Wallet enters it, while issuer push provisioning follows the card network and Google program specification. Check your program documents.</p>
+  </div>
+</section>
+
+<section class="lesson" id="rotation">
+  <div class="wrap prose">
+    <p class="kicker"><span class="num">4</span> Intermediate</p>
+    <h2>Encryption keys and rotation</h2>
+    <p>A common fear is that rotating the key makes old data unreadable. It does not, as long as every row remembers which key encrypted it. You add a new key for new rows and keep the old keys for reading.</p>
+    <p>The lab uses real AES-256-GCM in your browser. Rotate the key, store a few rows, and decrypt the old ones. Then delete a key that rows still use and see what happens.</p>
+
+    <div class="lab" id="lab-keys">
+      <p class="lab-tag">Lab 4 · Keyring and rows</p>
+      <div class="split">
+        <div>
+          <h3>Keyring</h3>
+          <ul class="keyring" id="keyring"></ul>
+          <button type="button" class="btn" id="btn-rotate">Rotate: add a new key</button>
+        </div>
+        <div class="stack">
+          <h3>Store a card number</h3>
+          <label class="field" style="width:100%"><span>Test card number</span><input id="lab-pan" inputmode="numeric" maxlength="19" autocomplete="off" value="4012888888881881"></label>
+          <button type="button" class="btn primary" id="btn-add">Encrypt and save a row</button>
+          <button type="button" class="btn" id="btn-reenc">Re-encrypt old rows with the active key</button>
+        </div>
+      </div>
+      <div class="tablewrap">
+        <table class="rows">
+          <thead><tr><th>Row</th><th>key_id</th><th>pan_encrypted (iv + ciphertext)</th><th>Result</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="msg" id="lab-msg" aria-live="polite">Setting up the keyring…</p>
+      <button type="button" class="btn small-btn" id="btn-reset">Reset the lab</button>
+    </div>
+
+    <p>The safe way to retire a key is to re-encrypt every row with the active key, confirm that nothing references the old key id, and only then delete it. Save the key id on every row from day one.</p>
+  </div>
+</section>
+
+<section class="lesson" id="keyhome">
+  <div class="wrap prose">
+    <p class="kicker"><span class="num">5</span> Intermediate</p>
+    <h2>Where the keys live</h2>
+    <p>Encryption only helps when the key is somewhere else. A key stored in the same database, or in a config file on the same server, goes with the data when someone copies it. Envelope encryption keeps the keys out of reach in three steps.</p>
+    <ol>
+      <li>Generate a data key and use it to encrypt the PAN with AES-256-GCM.</li>
+      <li>Ask the KMS or HSM to wrap that data key with a master key that never leaves it. Store the wrapped key and the key id with the row.</li>
+      <li>To rotate the master key, re-wrap the small data keys. The PAN ciphertext never changes.</li>
+    </ol>
+    <p>Compare both setups below. The dump uses the rows from step 4.</p>
+
+    <div class="lab" id="lab-theft">
+      <p class="lab-tag">Lab 5 · Steal the database</p>
+      <div class="lab-bar">
+        <div class="seg" role="group" aria-label="Where the keys live">
+          <button type="button" class="seg-btn" id="kloc-db" aria-pressed="true">Keys in the same database</button>
+          <button type="button" class="seg-btn" id="kloc-kms" aria-pressed="false">Keys in a separate KMS</button>
+        </div>
+        <button type="button" class="btn danger" id="btn-steal">Steal a database dump</button>
+      </div>
+      <div class="steal-out" id="steal-out" aria-live="polite"></div>
+    </div>
+
+    <p>Keys in a config file are better than keys in the database, but anyone who can read the server environment can still read them. A KMS or HSM keeps them off the application host too. MySQL tablespace encryption (TDE) does not replace this. It protects stolen disks, not people with database access.</p>
+  </div>
+</section>
+
+<section class="lesson" id="flow">
+  <div class="wrap prose">
+    <p class="kicker"><span class="num">6</span> Intermediate</p>
+    <h2>Putting it together: provisioning a card</h2>
+    <p>Step through a Google Wallet card provisioning flow and watch where clear card data exists. The flow follows the common pattern. Exact payload formats and keys come from your issuer program with the card network and Google, so follow those specifications.</p>
+
+    <div class="lab" id="lab-flow">
+      <p class="lab-tag">Lab 6 · Who can read the card?</p>
+      <div class="flow-nav">
+        <button type="button" class="btn" id="flow-prev">Back</button>
+        <p id="flow-count"></p>
+        <button type="button" class="btn primary" id="flow-next">Next</button>
+      </div>
+      <h3 id="flow-title"></h3>
+      <p id="flow-text" aria-live="polite"></p>
+      <ul class="actors" id="actors"></ul>
+      <p class="legend">
+        <span><i class="l-clear"></i>Clear card data exists here</span>
+        <span><i class="l-enc"></i>Ciphertext only</span>
+        <span><i class="l-token"></i>Token data</span>
+        <span><i class="l-key"></i>Holds keys</span>
+      </p>
+    </div>
+
+    <h3 style="margin-top:32px">Your project checklist</h3>
+    <div class="lab">
+      <div class="lab-bar"><p class="score" id="check-score" aria-live="polite"></p></div>
+      <ul class="checklist" id="checklist"></ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>This tutorial is a learning aid and not compliance advice. All card numbers and PINs here are test values. Keys in the labs exist only in your browser memory and disappear when you close the page.</p>
+    <p>Confirm scope and requirements with your QSA, your acquirer, and the Google Wallet issuer documentation before building.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+var $ = function(s, r){ return (r || document).querySelector(s); };
+var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var esc = function(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var HAS_CRYPTO = !!(window.crypto && window.crypto.subtle);
+var enc = new TextEncoder();
+var dec = new TextDecoder();
+
+function hex(buf){ return Array.prototype.map.call(new Uint8Array(buf), function(b){ return b.toString(16).padStart(2, '0'); }).join(''); }
+function unhex(h){ return new Uint8Array(h.match(/../g).map(function(x){ return parseInt(x, 16); })); }
+function rand(n){
+  var a = new Uint8Array(n);
+  if (window.crypto && window.crypto.getRandomValues) { window.crypto.getRandomValues(a); }
+  else { for (var i = 0; i < n; i++) a[i] = Math.floor(Math.random() * 256); }
+  return a;
+}
+function fmtPan(p){ return p.replace(/(.{4})/g, '$1 ').trim(); }
+
+/* ---------- Step bar ---------- */
+var navLinks = $$('.steps a');
+navLinks.forEach(function(a){
+  a.addEventListener('click', function(e){
+    e.preventDefault();
+    var t = document.getElementById(a.dataset.target);
+    if (t) t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  });
+});
+if ('IntersectionObserver' in window) {
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if (!en.isIntersecting) return;
+      navLinks.forEach(function(a){ a.removeAttribute('aria-current'); });
+      var a = navLinks.filter(function(x){ return x.dataset.target === en.target.id; })[0];
+      if (a) {
+        a.setAttribute('aria-current', 'true');
+        var ol = a.parentElement.parentElement;
+        ol.scrollLeft = a.offsetLeft - ol.clientWidth / 2 + a.clientWidth / 2;
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  $$('.lesson').forEach(function(s){ io.observe(s); });
+}
+
+/* ---------- Step 1: follow the PIN ---------- */
+var rsaPromise = null;
+function getRsa(){
+  if (!HAS_CRYPTO) return Promise.resolve(null);
+  if (!rsaPromise) {
+    rsaPromise = crypto.subtle.generateKey(
+      { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+      false, ['encrypt', 'decrypt']
+    ).catch(function(){ return null; });
+  }
+  return rsaPromise;
+}
+async function sealPin(pin){
+  var pair = await getRsa();
+  if (pair) {
+    var ct = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, pair.publicKey, enc.encode(pin));
+    return { ct: hex(ct), pin: pin, simulated: false };
+  }
+  return { ct: hex(rand(256)), pin: pin, simulated: true };
+}
+async function openPin(sealed){
+  var pair = await getRsa();
+  if (pair && !sealed.simulated) {
+    var pt = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, pair.privateKey, unhex(sealed.ct));
+    return dec.decode(pt);
+  }
+  return sealed.pin;
+}
+
+var pathState = { mode: 'plain', pin: '4821', tok: 0, cache: {} };
+async function renderPath(){
+  var tok = ++pathState.tok;
+  var pin = pathState.pin || '----';
+  var encMode = pathState.mode === 'enc';
+  var sealed = null, opened = null;
+  if (encMode) {
+    if (!pathState.cache[pin]) pathState.cache[pin] = await sealPin(pin);
+    sealed = pathState.cache[pin];
+    opened = await openPin(sealed);
+  }
+  if (tok !== pathState.tok) return;
+
+  var short = encMode ? sealed.ct.slice(0, 28) + '…' : '';
+  var bodyPlain = '{"pin":"' + esc(pin) + '"}';
+  var bodyEnc = '{"pin":"' + short + '"}';
+  var body = encMode ? bodyEnc : bodyPlain;
+  var readPill = encMode ? ['ok', 'Sees ciphertext'] : ['bad', 'Can read the PIN'];
+  var readCls = encMode ? 'ok' : 'bad';
+
+  var hops = [
+    { name: 'Phone app', note: 'Your Android or iOS app', cls: encMode ? 'ok' : '', pill: encMode ? ['ok', 'Encrypts here'] : ['mute', 'Sends it as typed'],
+      code: encMode ? 'encrypt(publicKey, "' + esc(pin) + '")  →  ' + short : 'POST /cards/provision  ' + bodyPlain },
+    { name: 'CDN / WAF', note: 'TLS ends here', cls: readCls, pill: readPill, code: body },
+    { name: 'Load balancer', note: 'Forwards inside your network', cls: readCls, pill: readPill, code: body },
+    { name: 'App server', note: 'Your backend code', cls: readCls, pill: readPill, code: body },
+    { name: 'Log store / APM', note: 'Request logs and crash reports', cls: readCls, pill: readPill,
+      code: 'INFO POST /cards/provision body=' + body },
+    { name: 'HSM', note: encMode ? 'Hardware that holds the private key' : 'Should have been the only reader', cls: encMode ? 'ok' : '',
+      pill: encMode ? ['ok', 'Only reader'] : ['warn', 'Too late'],
+      code: encMode ? 'decrypt(privateKey, ciphertext)  →  "' + esc(opened) + '"' : 'receives ' + bodyPlain + '  (four stops already saw it)' }
+  ];
+  $('#hops').innerHTML = hops.map(function(h){
+    return '<li class="hop ' + h.cls + '"><span class="dot"></span><div><div class="hop-top"><strong>' + h.name +
+      '</strong><span class="note">' + h.note + '</span><span class="pill ' + h.pill[0] + '">' + h.pill[1] +
+      '</span></div><code class="sees">' + h.code + '</code></div></li>';
+  }).join('');
+  var sim = encMode && sealed.simulated ? ' <span class="small">(Web Crypto is not available here, so this ciphertext is simulated.)</span>' : '';
+  $('#path-tally').innerHTML = encMode
+    ? '<strong>0 of 4</strong> stops between the phone and the HSM can read the PIN. Only the HSM can open it.' + sim
+    : '<strong>4 of 4</strong> stops between the phone and the HSM can read the PIN.';
+}
+function setMode(m){
+  pathState.mode = m;
+  $('#mode-plain').setAttribute('aria-pressed', String(m === 'plain'));
+  $('#mode-enc').setAttribute('aria-pressed', String(m === 'enc'));
+  renderPath();
+}
+$('#mode-plain').addEventListener('click', function(){ setMode('plain'); });
+$('#mode-enc').addEventListener('click', function(){ setMode('enc'); });
+$('#path-pin').addEventListener('input', function(e){
+  var v = e.target.value.replace(/\D/g, '').slice(0, 6);
+  e.target.value = v;
+  pathState.pin = v;
+  $('#path-hint').hidden = v.length >= 4 || v.length === 0;
+  renderPath();
+});
+
+/* ---------- Step 2: PIN block ---------- */
+/*PB-START*/
+function pinBlock0(pin, pan){
+  var pinField = ('0' + pin.length.toString(16) + pin).padEnd(16, 'F').toUpperCase();
+  var core = pan.slice(0, -1).slice(-12).padStart(12, '0');
+  var panField = '0000' + core;
+  var out = '';
+  for (var i = 0; i < 16; i++) {
+    out += (parseInt(pinField[i], 16) ^ parseInt(panField[i], 16)).toString(16).toUpperCase();
+  }
+  return { pinField: pinField, panField: panField, core: core, block: out };
+}
+/*PB-END*/
+
+var blockState = { pin: '4821', pan: '4111111111111111' };
+function nibRow(label, str, clsFn){
+  return '<div role="img" aria-label="' + esc(label) + ': ' + esc(str) + '"><div class="nibs">' +
+    str.split('').map(function(c, i){ return '<span class="nib ' + clsFn(i) + '">' + c + '</span>'; }).join('') +
+    '</div></div>';
+}
+function renderBlock(){
+  var out = $('#pb-out'), err = $('#pb-err');
+  var pin = blockState.pin, pan = blockState.pan;
+  if (!/^\d{4,6}$/.test(pin)) { err.hidden = false; err.textContent = 'Enter a PIN with 4 to 6 digits.'; out.innerHTML = ''; return; }
+  if (!/^\d{13,19}$/.test(pan)) { err.hidden = false; err.textContent = 'Enter a test card number with 13 to 19 digits.'; out.innerHTML = ''; return; }
+  err.hidden = true;
+  var A = pinBlock0(pin, pan);
+  var panB = pan === '5555555555554444' ? '4111111111111111' : '5555555555554444';
+  var B = pinBlock0(pin, panB);
+  var diff = 0;
+  for (var i = 0; i < 16; i++) if (A.block[i] !== B.block[i]) diff++;
+  var h = '';
+  h += '<p class="step">Step 1. PIN field</p>';
+  h += nibRow('PIN field', A.pinField, function(i){ return i === 0 ? 'ctl' : i === 1 ? 'len' : i < 2 + pin.length ? 'pin' : 'pad'; });
+  h += '<p class="small">Control nibble 0 and length nibble ' + pin.length + ' (amber), the PIN digits (blue), then F padding (grey) up to 16 hex digits.</p>';
+  h += '<p class="step">Step 2. PAN field</p>';
+  h += nibRow('PAN field', A.panField, function(i){ return i < 4 ? 'pad' : 'nib'; });
+  h += '<p class="small">Four zeros, then the rightmost 12 digits of the card number without its last check digit: ' + esc(A.core) + '.</p>';
+  h += '<p class="step">Step 3. XOR the two fields to get the clear PIN block</p>';
+  h += nibRow('Clear PIN block', A.block, function(){ return 'res'; });
+  h += '<p class="step">Step 4. The HSM encrypts the block</p>';
+  h += '<p class="small">Only the encrypted block travels onward. The clear block exists briefly inside the HSM or the PIN pad.</p>';
+  h += '<div class="compare"><p class="step" style="margin-top:0">Same PIN on a different card (' + esc(panB.slice(0, 4)) + ' … ' + esc(panB.slice(-4)) + ')</p>';
+  h += nibRow('PIN block on the other card', B.block, function(i){ return A.block[i] !== B.block[i] ? 'diff' : 'res'; });
+  h += '<p class="small">' + diff + ' of 16 nibbles differ (red). The PIN is identical, but the block is not.</p></div>';
+  out.innerHTML = h;
+}
+$('#pb-pin').addEventListener('input', function(e){
+  var v = e.target.value.replace(/\D/g, '').slice(0, 6);
+  e.target.value = v; blockState.pin = v; renderBlock();
+});
+$('#pb-pan').addEventListener('input', function(e){
+  var v = e.target.value.replace(/\D/g, '').slice(0, 19);
+  e.target.value = v; blockState.pan = v; renderBlock();
+});
+$$('[data-pan]').forEach(function(b){
+  b.addEventListener('click', function(){
+    blockState.pan = b.dataset.pan;
+    $('#pb-pan').value = b.dataset.pan;
+    renderBlock();
+  });
+});
+
+/* ---------- Step 3: sort the fields ---------- */
+var FIELDS = [
+  { k: 'pin', name: 'PIN', sample: '4821', ans: 'never',
+    hint: 'Ask what should still exist after the HSM has used it.',
+    why: 'Never store a PIN or PIN block, not even encrypted. It only exists on its way to the HSM.' },
+  { k: 'cvv', name: 'CVV / CVC', sample: '737', ans: 'never',
+    hint: 'Authorization is the last moment you may hold it.',
+    why: 'Never keep it after authorization, even encrypted, and keep it out of logs.' },
+  { k: 'pan', name: 'PAN (card number)', sample: '4111 1111 1111 1111', ans: 'encrypt',
+    hint: 'Someone who copies the database must not be able to read it.',
+    why: 'Stored PAN must be unreadable. Use strong encryption with keys held elsewhere, or store a token instead.' },
+  { k: 'dpan', name: 'DPAN (device token)', sample: '4900 0000 0000 0007', ans: 'encrypt',
+    hint: 'It is not the real card number, but it still has value to an attacker.',
+    why: 'Treat it as sensitive. Prefer keeping the token reference ID, and encrypt the DPAN if you must store it.' },
+  { k: 'exp', name: 'Expiry date', sample: '08 / 29', ans: 'encrypt', almost: 'plain',
+    hint: 'It is one of the things an attacker needs along with the PAN.',
+    why: 'PCI does not force it, but expiry is part of what an attacker needs, and encrypting it with the PAN costs almost nothing.',
+    almostMsg: 'Allowed by PCI, but not recommended. Expiry is part of what an attacker needs, so encrypt it with the PAN. Keep it in plain text only for a real need such as expiry reminders.' },
+  { k: 'last4', name: 'Last four digits', sample: '1111', ans: 'plain',
+    hint: 'Receipts and screens already show it.',
+    why: 'Fine in plain text. It is useful for display and support.' },
+  { k: 'ref', name: 'Token reference ID', sample: 'tkn_8f3a91c2', ans: 'plain',
+    hint: 'Could someone pay with it on its own?',
+    why: 'It cannot pay anywhere by itself, so plain storage is fine. Still limit who can read it.' }
+];
+var OPTS = [['never', 'Never store'], ['encrypt', 'Encrypt'], ['plain', 'Plain is OK']];
+var sortState = {};
+function fieldHtml(f){
+  var st = sortState[f.k] || {};
+  var btns = OPTS.map(function(o){
+    var pressed = st.choice === o[0] && (st.status === 'ok' || st.status === 'almost');
+    return '<button type="button" class="btn small-btn" data-k="' + f.k + '" data-v="' + o[0] + '" aria-pressed="' + pressed + '"' + (st.done ? ' disabled' : '') + '>' + o[1] + '</button>';
+  }).join('');
+  var fb = '';
+  if (st.status === 'ok') fb = '<p class="fb ok"><b>Correct.</b> ' + f.why + '</p>';
+  else if (st.status === 'almost') fb = '<p class="fb almost"><b>Almost.</b> ' + f.almostMsg + '</p>';
+  else if (st.status === 'bad') fb = '<p class="fb bad"><b>Not quite.</b> ' + f.hint + '</p>';
+  return '<div class="fr-top"><strong>' + f.name + '</strong><code>' + f.sample + '</code></div><div class="opts">' + btns + '</div>' + fb;
+}
+function renderSortScore(){
+  var n = FIELDS.filter(function(f){ return (sortState[f.k] || {}).done; }).length;
+  $('#sort-score').textContent = n === FIELDS.length ? 'All ' + n + ' sorted.' : n + ' of ' + FIELDS.length + ' sorted';
+}
+function renderSort(){
+  $('#fields').innerHTML = FIELDS.map(function(f){ return '<li class="fieldrow" data-row="' + f.k + '">' + fieldHtml(f) + '</li>'; }).join('');
+  renderSortScore();
+}
+$('#fields').addEventListener('click', function(e){
+  var b = e.target.closest('button[data-v]');
+  if (!b) return;
+  var f = FIELDS.filter(function(x){ return x.k === b.dataset.k; })[0];
+  var st = sortState[f.k] || (sortState[f.k] = {});
+  if (st.done) return;
+  var v = b.dataset.v;
+  st.choice = v;
+  if (v === f.ans) { st.done = true; st.status = 'ok'; }
+  else if (f.almost === v) { st.status = 'almost'; }
+  else { st.status = 'bad'; }
+  var li = $('[data-row="' + f.k + '"]', $('#fields'));
+  li.innerHTML = fieldHtml(f);
+  if (!st.done) { var again = li.querySelector('button[data-v="' + v + '"]'); if (again) again.focus(); }
+  renderSortScore();
+});
+$('#sort-reset').addEventListener('click', function(){ sortState = {}; renderSort(); });
+
+/* ---------- Step 4: keyring lab ---------- */
+var Lab = {
+  newKey: async function(){
+    if (HAS_CRYPTO) return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+    return { toy: rand(32) };
+  },
+  encrypt: async function(key, text){
+    var iv = rand(12);
+    if (HAS_CRYPTO) {
+      var ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, enc.encode(text));
+      return hex(iv) + hex(ct);
+    }
+    var pt = enc.encode(text);
+    var out = pt.map(function(b, i){ return b ^ key.toy[i % 32] ^ iv[i % 12]; });
+    return hex(iv) + hex(out);
+  },
+  decrypt: async function(key, stored){
+    var iv = unhex(stored.slice(0, 24));
+    var ct = unhex(stored.slice(24));
+    if (HAS_CRYPTO) {
+      var pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
+      return dec.decode(pt);
+    }
+    var out = ct.map(function(b, i){ return b ^ key.toy[i % 32] ^ iv[i % 12]; });
+    return dec.decode(out);
+  },
+  keyHex: async function(key){
+    if (HAS_CRYPTO) return hex(await crypto.subtle.exportKey('raw', key));
+    return hex(key.toy);
+  }
+};
+
+var L = { keys: [], rows: [], next: 1, active: 'v1', results: {}, keyLoc: 'db', busy: false };
+function keyById(id){ return L.keys.filter(function(k){ return k.id === id; })[0]; }
+function usedBy(id){ return L.rows.filter(function(r){ return r.keyId === id; }).length; }
+function say(t){ $('#lab-msg').textContent = t; }
+function plural(n, one, many){ return n + ' ' + (n === 1 ? one : many); }
+
+function renderKeyring(){
+  $('#keyring').innerHTML = L.keys.map(function(k){
+    var n = usedBy(k.id);
+    var status = k.deleted ? '<span class="pill bad">deleted</span>'
+      : (k.id === L.active ? '<span class="pill ok">active</span>' : '<span class="pill mute">decrypt only</span>');
+    var used = '<span class="used">' + plural(n, 'row uses it', 'rows use it') + '</span>';
+    var btn = k.deleted ? '' : '<button type="button" class="btn small-btn danger-ghost" data-act="delkey" data-key="' + k.id + '"' +
+      (k.id === L.active ? ' disabled title="Rotate first. The active key cannot be deleted."' : '') + '>Delete</button>';
+    return '<li><span class="kid">' + k.id + '</span>' + status + used + btn + '</li>';
+  }).join('');
+}
+function renderRows(){
+  $('#rows').innerHTML = L.rows.map(function(r){
+    var k = keyById(r.keyId);
+    var gone = !k || k.deleted;
+    var res = L.results[r.n];
+    var cell = res
+      ? '<span class="' + (res.ok ? 'res-ok' : 'res-bad') + '">' + esc(res.text) + '</span>'
+      : '<button type="button" class="btn small-btn" data-act="dec" data-row="' + r.n + '">Decrypt</button>';
+    return '<tr><td>#' + r.n + (r.example ? ' <span class="pill mute">example</span>' : '') + '</td>' +
+      '<td><span class="kid">' + r.keyId + '</span>' + (gone ? ' <span class="pill bad">key deleted</span>' : '') + '</td>' +
+      '<td class="stored" title="' + r.stored + '">' + r.stored.slice(0, 40) + '…</td><td>' + cell + '</td></tr>';
+  }).join('');
+}
+function resetSteal(){
+  $('#steal-out').innerHTML = '<p class="small">Choose where the keys live, then steal a copy of the database. The dump uses the rows from step 4.</p>';
+}
+function renderLab(){ renderKeyring(); renderRows(); resetSteal(); }
+
+async function addRow(pan, example){
+  var k = keyById(L.active);
+  var stored = await Lab.encrypt(k.key, pan);
+  L.rows.push({ n: L.next++, keyId: k.id, stored: stored, example: !!example });
+}
+async function labInit(){
+  L.keys = []; L.rows = []; L.next = 1; L.results = {};
+  var k = await Lab.newKey();
+  L.keys.push({ id: 'v1', key: k, deleted: false });
+  L.active = 'v1';
+  await addRow('4111111111111111', true);
+  await addRow('5500000000000004', true);
+  renderLab();
+  say('Two example rows are stored with key v1. Try rotating the key.');
+}
+async function doRotate(){
+  var id = 'v' + (L.keys.length + 1);
+  var key = await Lab.newKey();
+  L.keys.push({ id: id, key: key, deleted: false });
+  L.active = id; L.results = {};
+  renderLab();
+  say('Key ' + id + ' is now active. New rows use ' + id + '. Older rows still name their own key, and those keys are still in the keyring, so they still decrypt.');
+}
+async function doAdd(){
+  var v = $('#lab-pan').value.replace(/\D/g, '');
+  if (!/^\d{13,19}$/.test(v)) { say('Enter a test card number with 13 to 19 digits.'); return; }
+  await addRow(v, false);
+  L.results = {};
+  renderLab();
+  say('Saved row #' + (L.next - 1) + ' with key ' + L.active + '. The card number itself is not stored anywhere.');
+}
+function doDelete(id){
+  var k = keyById(id);
+  if (!k || k.deleted || id === L.active) return;
+  var n = usedBy(id);
+  k.deleted = true; k.key = null; L.results = {};
+  renderLab();
+  say(n ? 'Deleted ' + id + '. ' + plural(n, 'row', 'rows') + ' used it and can never be decrypted.' : 'Deleted ' + id + '. No row used it, so nothing was lost.');
+}
+async function doDecrypt(n){
+  var r = L.rows.filter(function(x){ return x.n === n; })[0];
+  var k = keyById(r.keyId);
+  if (!k || k.deleted) {
+    L.results[n] = { ok: false, text: 'Key ' + r.keyId + ' was deleted. This row cannot be read.' };
+  } else {
+    try { L.results[n] = { ok: true, text: fmtPan(await Lab.decrypt(k.key, r.stored)) }; }
+    catch (e) { L.results[n] = { ok: false, text: 'Decryption failed.' }; }
+  }
+  renderRows();
+}
+async function doReencrypt(){
+  var a = keyById(L.active);
+  var moved = 0, skipped = 0;
+  for (var i = 0; i < L.rows.length; i++) {
+    var r = L.rows[i];
+    if (r.keyId === a.id) continue;
+    var k = keyById(r.keyId);
+    if (!k || k.deleted) { skipped++; continue; }
+    var pan = await Lab.decrypt(k.key, r.stored);
+    r.stored = await Lab.encrypt(a.key, pan);
+    r.keyId = a.id;
+    moved++;
+  }
+  L.results = {};
+  renderLab();
+  if (moved) say('Re-encrypted ' + plural(moved, 'row', 'rows') + ' with ' + a.id + '.' + (skipped ? ' Skipped ' + skipped + ' that had already lost their key.' : ' Older keys are now unused and safe to delete.'));
+  else if (skipped) say('Skipped ' + plural(skipped, 'row', 'rows') + ' whose key is gone.');
+  else say('Every row already uses ' + a.id + '.');
+}
+async function guard(fn){
+  if (L.busy) return;
+  L.busy = true;
+  try { await fn(); } catch (e) { say('Something went wrong: ' + e.message); }
+  L.busy = false;
+}
+$('#btn-rotate').addEventListener('click', function(){ guard(doRotate); });
+$('#btn-add').addEventListener('click', function(){ guard(doAdd); });
+$('#btn-reenc').addEventListener('click', function(){ guard(doReencrypt); });
+$('#btn-reset').addEventListener('click', function(){ guard(labInit); });
+$('#lab-pan').addEventListener('input', function(e){ e.target.value = e.target.value.replace(/\D/g, '').slice(0, 19); });
+$('#lab-keys').addEventListener('click', function(e){
+  var b = e.target.closest('button[data-act]');
+  if (!b) return;
+  if (b.dataset.act === 'delkey') doDelete(b.dataset.key);
+  if (b.dataset.act === 'dec') {
+    var n = Number(b.dataset.row);
+    guard(function(){ return doDecrypt(n); });
+  }
+});
+
+/* ---------- Step 5: steal the database ---------- */
+function setKeyLoc(v){
+  L.keyLoc = v;
+  $('#kloc-db').setAttribute('aria-pressed', String(v === 'db'));
+  $('#kloc-kms').setAttribute('aria-pressed', String(v === 'kms'));
+  resetSteal();
+}
+$('#kloc-db').addEventListener('click', function(){ setKeyLoc('db'); });
+$('#kloc-kms').addEventListener('click', function(){ setKeyLoc('kms'); });
+async function steal(){
+  var inDb = L.keyLoc === 'db';
+  var h = '<p class="small">Table <code>cards</code> (id, key_id, pan_encrypted)</p>';
+  h += '<pre class="dump">' + esc(L.rows.map(function(r){ return '#' + r.n + '  ' + r.keyId + '  ' + r.stored.slice(0, 32) + '…'; }).join('\n')) + '</pre>';
+  if (inDb) {
+    var kt = [];
+    for (var i = 0; i < L.keys.length; i++) {
+      var k = L.keys[i];
+      kt.push(k.id + '  ' + (k.deleted ? '(deleted)' : (await Lab.keyHex(k.key)).slice(0, 32) + '…'));
+    }
+    h += '<p class="small">Table <code>encryption_keys</code> (id, key_material)</p><pre class="dump">' + esc(kt.join('\n')) + '</pre>';
+    var lines = [], readable = 0;
+    for (var j = 0; j < L.rows.length; j++) {
+      var r = L.rows[j], kk = keyById(r.keyId);
+      if (kk && !kk.deleted) {
+        try { lines.push('#' + r.n + '  ' + fmtPan(await Lab.decrypt(kk.key, r.stored))); readable++; }
+        catch (e) { lines.push('#' + r.n + '  decryption failed'); }
+      } else { lines.push('#' + r.n + '  key missing, unreadable'); }
+    }
+    h += '<p class="small">What the attacker does next</p><pre class="dump bad">' + esc(lines.join('\n')) + '</pre>';
+    h += '<p class="verdict bad">The attacker read ' + readable + ' of ' + L.rows.length + ' card numbers. The keys travelled with the data.</p>';
+  } else {
+    h += '<p class="small">There is no key table in this dump. The keys stay inside the KMS or HSM.</p>';
+    h += '<p class="verdict ok">The attacker holds ' + L.rows.length + ' ciphertexts and can read none of them. They would also need permission to call your KMS.</p>';
+  }
+  $('#steal-out').innerHTML = h;
+}
+$('#btn-steal').addEventListener('click', function(){ guard(steal); });
+
+/* ---------- Step 6: provisioning flow ---------- */
+var ICON = {
+  clear: '<svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  enc: '<svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  token: '<svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>',
+  key: '<svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg>',
+  idle: '<svg class="ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg>'
+};
+var ACTORS = [['app', 'Customer app'], ['gw', 'CDN / gateway'], ['be', 'Backend'], ['kms', 'HSM / KMS'], ['tp', 'Token provider'], ['db', 'MySQL']];
+var STEPS = [
+  { t: 'The customer types the card',
+    x: 'The customer enters the card number and expiry in your app. This is the only place the clear values exist at the start.',
+    s: { app: ['clear', 'Holds the card the customer typed'] } },
+  { t: 'The app encrypts before sending',
+    x: 'The app encrypts the card data with your backend public key, for example as a JWE using RSA-OAEP or ECDH, and sends only ciphertext. The CDN and gateway carry it but cannot open it, and neither can their logs.',
+    s: { app: ['enc', 'Sends ciphertext only'], gw: ['enc', 'Sees ciphertext only'] } },
+  { t: 'Only the key service opens it',
+    x: 'The backend passes the ciphertext to the service or HSM that holds the private key. Clear card data exists only inside that boundary, and only for as long as the next step needs it.',
+    s: { gw: ['enc', 'Forwards ciphertext'], be: ['enc', 'Holds ciphertext, cannot open it'], kms: ['clear', 'Decrypts inside the boundary'] } },
+  { t: 'Re-encrypt for the token provider',
+    x: 'The key service builds the payload that the card network and Google Wallet program expect, encrypted to their public key. Your app passes this opaque payload to the Wallet SDK and cannot read it. The exact format comes from your issuer program, so follow that specification.',
+    s: { app: ['enc', 'Passes an opaque payload to the SDK'], kms: ['clear', 'Builds the encrypted payload'], tp: ['enc', 'Receives a payload it can open'] } },
+  { t: 'A token comes back',
+    x: 'The token provider returns a token reference and a device PAN (DPAN). Keep the reference ID. Treat the DPAN as sensitive, and encrypt it if you keep it.',
+    s: { tp: ['token', 'Returns token data'], be: ['token', 'Receives the reference ID and DPAN'] } },
+  { t: 'Store only what you need',
+    x: 'Encrypt the PAN and expiry with AES-256-GCM using a data key, save the key id on each row, and keep the master key in the KMS. Drop the CVV and the PIN. Nothing card related goes into logs.',
+    s: { be: ['enc', 'Writes ciphertext and key_id'], kms: ['key', 'Holds the master key'], db: ['enc', 'Stores ciphertext only'] } }
+];
+var flow = { i: 0 };
+function renderFlow(){
+  var st = STEPS[flow.i];
+  $('#flow-title').textContent = st.t;
+  $('#flow-text').textContent = st.x;
+  $('#flow-count').textContent = 'Step ' + (flow.i + 1) + ' of ' + STEPS.length;
+  $('#actors').innerHTML = ACTORS.map(function(a){
+    var s = st.s[a[0]] || ['idle', 'Not involved'];
+    return '<li class="actor st-' + s[0] + '">' + ICON[s[0]] + '<strong>' + a[1] + '</strong><span class="lbl">' + s[1] + '</span></li>';
+  }).join('');
+  $('#flow-prev').disabled = flow.i === 0;
+  $('#flow-next').disabled = flow.i === STEPS.length - 1;
+}
+$('#flow-prev').addEventListener('click', function(){ if (flow.i > 0) { flow.i--; renderFlow(); } });
+$('#flow-next').addEventListener('click', function(){ if (flow.i < STEPS.length - 1) { flow.i++; renderFlow(); } });
+
+/* ---------- Checklist ---------- */
+var CHECKS = [
+  'The PIN is encrypted on the client, opened only in an HSM, and never stored or logged.',
+  'The CVV is never stored or logged.',
+  'PAN and expiry are encrypted at rest with AES-256-GCM and a key_id saved on every row.',
+  'Keys live in a KMS or HSM, not in the database and not in an app config file.',
+  'Old key versions stay decrypt-only until a re-encryption job has moved every row.',
+  'Request body logging is off for card endpoints, and gateways redact card fields.',
+  'The token reference ID is stored instead of the DPAN where possible, and the DPAN is encrypted if kept.',
+  'Scope and provisioning details are confirmed with the QSA, the acquirer, and the Google Wallet issuer docs.'
+];
+function renderChecks(){
+  $('#checklist').innerHTML = CHECKS.map(function(c, i){
+    return '<li><label for="chk' + i + '"><input type="checkbox" id="chk' + i + '"><span>' + c + '</span></label></li>';
+  }).join('');
+  updateChecks();
+}
+function updateChecks(){
+  var n = $$('#checklist input:checked').length;
+  $('#check-score').textContent = n + ' of ' + CHECKS.length + ' done';
+}
+$('#checklist').addEventListener('change', updateChecks);
+
+/* ---------- Start ---------- */
+renderPath();
+renderBlock();
+renderSort();
+resetSteal();
+renderFlow();
+renderChecks();
+guard(labInit);
+})();
+</script>
+
+</body></html>
