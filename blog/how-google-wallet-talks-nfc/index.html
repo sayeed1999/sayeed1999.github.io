@@ -188,7 +188,10 @@ body{margin:0;background:#fff}
   <div class="who">Google Wallet<small>the card</small></div>
 </div>
 <div class="note">
-  <p>The POS starts the <strong>APDU</strong> conversation. During the tap it cannot tell that the card is a phone.</p>
+  <p>The POS starts the <strong>APDU</strong> conversation. During the tap it cannot tell that the card is a phone. Android makes that possible with <strong>Host Card Emulation</strong>: Google Wallet answers the terminal as if it were a card.</p>
+</div>
+<div class="note">
+  <p>If <strong>Samsung Wallet</strong> is installed too, the terminal still does not pick a wallet. Android's default payment app decides which wallet hears the tap. The terminal then picks an AID from the list that wallet returns. Which wallet is chosen depends on the Android version and the phone.</p>
 </div>
 
 <h2 id="tap"><span class="num">3</span>What happens when you tap?</h2>
@@ -294,7 +297,7 @@ body{margin:0;background:#fff}
   <div class="msg wallet"><span class="from">Google Wallet → POS</span>A one-time proof. Not an approval yet.</div>
 </div>
 <p>The exact sequence depends on the card network. The number in the card data is usually a token: a stand-in for the real card, issued for this phone. The printed number does not cross the radio.</p>
-<p>The cryptogram is not an approval. The terminal still has to ask the bank. That second conversation is not <strong>NFC</strong>.</p>
+<p>The cryptogram is a one-time proof for this sale, not an encrypted copy of the card number, and not an approval. The terminal still has to ask the bank. That second conversation is not <strong>NFC</strong>.</p>
 <div class="hops">
   <div class="who">Google Wallet<small>the phone</small></div>
   <div class="via"><strong>APDU</strong><br>over <strong>NFC</strong></div>
@@ -395,14 +398,14 @@ body{margin:0;background:#fff}
 <pre class="code">00 A4 04 00 07 A0000000031010 00</pre>
 <p>Here:</p>
 <pre class="code">A0000000031010</pre>
-<p>is the Visa AID.</p>
-<p>Google Wallet receives this <strong>APDU</strong> and selects that card.</p>
+<p>is the Visa credit/debit AID. It names that application. It does not name Google Wallet, and it does not name one plastic card.</p>
+<p>Google Wallet receives this <strong>APDU</strong> and selects that application. If two Visa cards share it, Google Wallet decides which token answers.</p>
 <p>It responds with its application information (FCI).</p>
 <p>For example:</p>
 <pre class="code">6F ... 90 00</pre>
 <p>The actual response contains application-specific data.</p>
 <p><strong>What did we achieve?</strong></p>
-<p>The POS has selected the Visa card inside Google Wallet. Google Wallet did not choose it. The POS did, from the list it was just given.</p>
+<p>The POS has selected Visa credit/debit, <code>A0000000031010</code>. Google Wallet did not choose that application. The POS did, from the list it was just given.</p>
 
 <h2 id="gpo">Lesson 3: GPO</h2>
 <p>Now things get interesting.</p>
@@ -465,7 +468,7 @@ body{margin:0;background:#fff}
   <fieldset>
     <legend>Who chooses the Visa card?</legend>
     <button type="button">Google Wallet chooses its favourite card.</button>
-    <button type="button" data-ok data-why="Google Wallet only offers the list. The POS picks one AID from it.">The POS, from the list it was just given.</button>
+    <button type="button" data-ok data-why="The POS picks the application, A0000000031010. If two Visa cards share it, Google Wallet then chooses which token answers.">The POS, from the list it was just given.</button>
     <button type="button">The bank chooses during the tap.</button>
     <p class="say" hidden></p>
   </fieldset>
