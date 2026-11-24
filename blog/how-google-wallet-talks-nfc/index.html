@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Google Wallet talks over NFC to POS devices · Md. Sayeed Rahman</title>
+<meta name="description" content="What a payment terminal and Google Wallet say to each other over NFC: the layers, then SELECT PPSE, SELECT AID and GPO.">
+<link rel="stylesheet" href="../../styles.css?v=10">
+<style>
+body{margin:0;background:#fff}
+@media (prefers-color-scheme:dark){
+  body{background:#14181f;color:#e8ecf3}
+  .topbar{background:color-mix(in srgb,#14181f 86%,transparent);border-bottom-color:#2b3340}
+  .brand{background:#e8ecf3;color:#14181f}
+  nav a{color:#9aa5b8}
+  nav a:hover{color:#e8ecf3}
+}
+.tap{
+  --bg:#ffffff;--fg:#1b2230;--muted:#586377;--line:#dde2ea;--card:#f5f7fa;
+  --accent:#2457d6;--accent-fg:#ffffff;--accent-soft:#e4ecff;
+  --ok:#0f7a43;--ok-soft:#dff5e8;--warn:#a85a00;--warn-soft:#fff1de;
+  background:var(--bg);color:var(--fg);
+  font:17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  width:min(720px,calc(100% - 40px));margin:0 auto;padding:28px 0 8px;
+}
+@media (prefers-color-scheme:dark){
+  .tap{
+    --bg:#14181f;--fg:#e8ecf3;--muted:#9aa5b8;--line:#2b3340;--card:#1c222c;
+    --accent:#7aa2ff;--accent-fg:#0d1220;--accent-soft:#223152;
+    --ok:#4cd08a;--ok-soft:#173826;--warn:#ffb459;--warn-soft:#3a2a12;
+  }
+}
+.tap *,.tap *::before,.tap *::after{box-sizing:border-box}
+.tap h1{font-size:2rem;line-height:1.2;margin:0 0 .35em;letter-spacing:-.01em;font-weight:700;text-transform:none;color:var(--fg)}
+.tap h2{font-size:1.45rem;line-height:1.3;margin:2.4em 0 .5em;letter-spacing:-.005em;font-weight:700;text-transform:none;color:var(--fg);scroll-margin-top:76px}
+.tap h3{font-size:1.1rem;margin:1.6em 0 .4em;font-weight:600;letter-spacing:0;text-transform:none;color:var(--fg)}
+.tap .back{margin:0 0 1em;font-weight:600}
+.tap a{color:var(--accent)}
+.tap p{margin:0 0 1em}
+.tap .small{font-size:.9rem;color:var(--muted)}
+.tap .num{display:inline-block;min-width:1.7em;margin-right:.35em;padding:0 .3em;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:.8em;text-align:center}
+.tap code,.tap .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+.tap code{font-size:.88em;background:var(--card);border:1px solid var(--line);padding:1px 5px;border-radius:5px}
+.tap ul,.tap ol{padding-left:1.3em;margin:0 0 1em}
+.tap li{margin:.25em 0}
+.tap .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:18px 0}
+.tap .note{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 8px 8px 0;margin:18px 0}
+.tap .note>:last-child{margin-bottom:0}
+.tap .note.ok{border-color:var(--ok);background:var(--ok-soft)}
+.tap .note strong:first-child{display:inline-block;margin-right:.2em}
+.tap .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.84rem;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 1em;white-space:pre;overflow-x:auto}
+.tap .tbl{overflow-x:auto;margin:12px 0 18px}
+.tap table{border-collapse:collapse;width:100%;font-size:.92rem}
+.tap th,.tap td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tap th{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.tap .stack{display:flex;flex-direction:column;gap:6px;margin:8px 0 18px}
+.tap .band{padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.tap .band b{display:block}
+.tap .band span{display:block;color:var(--muted);font-size:.9rem}
+.tap .band.apdu{margin:0 16%;background:var(--accent-soft);border-color:var(--accent)}
+.tap .band.iso{margin:0 8%}
+.tap .pair,.tap .hops{display:grid;gap:8px;align-items:center;margin:8px 0 18px;text-align:center}
+.tap .pair{grid-template-columns:1fr auto 1fr}
+.tap .hops{grid-template-columns:1fr auto 1fr auto 1fr}
+.tap .who{background:var(--fg);color:var(--bg);border-radius:10px;padding:10px 8px;font-weight:700;font-size:.9rem}
+.tap .who small{display:block;font-weight:400;opacity:.75}
+.tap .via{font-size:.78rem;font-weight:600;color:var(--muted)}
+.tap .stages{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0 18px}
+.tap .stage{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card)}
+.tap .stage b{display:block;color:var(--accent);font-size:.8rem}
+.tap .bytes{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
+.tap .b{border-radius:8px;padding:6px 8px;background:var(--accent-soft);border-bottom:3px solid var(--accent);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;font-weight:700;line-height:1.3}
+.tap .b small{display:block;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:600;letter-spacing:0}
+.tap .b.data{background:var(--ok-soft);border-color:var(--ok)}
+.tap .b.len{background:var(--warn-soft);border-color:var(--warn)}
+.tap .msgs{display:flex;flex-direction:column;gap:8px;margin:8px 0 18px}
+.tap .msg{max-width:80%;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}
+.tap .msg.pos{border-left:4px solid var(--accent)}
+.tap .msg.wallet{margin-left:auto;border-left:4px solid var(--ok)}
+.tap .msg.wide{max-width:100%}
+.tap .msg ul{margin:4px 0 0;padding-left:1.15em}
+.tap .msg li{margin:0}
+.tap .from{display:block;font-size:.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tap .hero{margin:0 0 1.2em}
+.tap .hero img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:12px}
+.tap .toc{display:grid;grid-template-columns:1fr 1fr;gap:4px 28px;margin:0 0 1.4em;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.tap .toc p{margin:0 0 .25em;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.tap .toc ol{margin:0;padding-left:1.25em}
+.tap .toc li{margin:.15em 0}
+.tap .toc a{text-decoration:underline;text-underline-offset:2px}
+.tap .quiz{display:flex;flex-direction:column;gap:14px;margin:8px 0 18px}
+.tap .quiz fieldset{border:1px solid var(--line);border-radius:12px;margin:0;padding:12px 14px}
+.tap .quiz legend{font-weight:700;padding:0 4px}
+.tap .quiz button{display:block;width:100%;margin:6px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.tap .quiz button.right{background:var(--ok-soft);border-color:var(--ok)}
+.tap .quiz button.wrong{background:var(--warn-soft);border-color:var(--warn)}
+.tap .quiz .say{margin:.6em 0 0}
+@media (max-width:560px){
+  .tap{font-size:16px}
+  .tap h1{font-size:1.65rem}
+  .tap .stages,.tap .pair,.tap .hops,.tap .toc{grid-template-columns:1fr}
+  .tap .band.apdu,.tap .band.iso{margin:0}
+  .tap .msg{max-width:100%}
+}
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="../../index.html" aria-label="Home">SR</a>
+      <nav aria-label="Primary">
+        <a href="../../index.html#about">About</a>
+        <a href="../../index.html#apps">Apps</a>
+        <a href="../../index.html#blog">Blog</a>
+        <a href="../../index.html#content">Content</a>
+        <a href="../../index.html#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+<article class="tap">
+<p class="small back"><a href="../index.html">← Blog</a></p>
+<h1>How Google Wallet talks over NFC to POS (Point-of-Sale) devices</h1>
+<p class="small">Payment Systems</p>
+<p>The picture is one tap. Google Wallet, on the left, answers as a card. The terminal on the right starts every line. Blue arrows are its commands. Green arrows are the phone's replies: the menu of cards, the chosen Visa application, then the records and a cryptogram.</p>
+<nav class="toc" aria-label="In this article">
+  <div>
+    <p>The layers</p>
+    <ol>
+      <li><a href="#terms"><strong>APDU</strong>, <strong>ISO-DEP</strong> and <strong>NFC</strong></a></li>
+      <li><a href="#roles">Who talks: the terminal starts</a></li>
+      <li><a href="#tap">A tap, in three stages</a></li>
+      <li><a href="#bytes">One SELECT, taken apart</a></li>
+      <li><a href="#isodep">Why the message is split into blocks</a></li>
+      <li><a href="#talk">The whole conversation, in order</a></li>
+    </ol>
+  </div>
+  <div>
+    <p>The commands</p>
+    <ol>
+      <li><a href="#ppse">SELECT PPSE, the cards in the wallet</a></li>
+      <li><a href="#aid">SELECT AID, the terminal picks Visa</a></li>
+      <li><a href="#gpo">GPO, which records to read</a></li>
+      <li><a href="#where">Where this stops</a></li>
+    </ol>
+  </div>
+</nav>
+<figure class="hero">
+  <img src="Android%20Wallet%20to%20POS_%20NFC%20Payment%20Flow.png" width="1536" height="1024" alt="A phone running Google Wallet and a POS terminal. NFC carries the conversation: the terminal sends SELECT PPSE, SELECT AID and GPO, and the phone answers with the card list, application data and a cryptogram.">
+</figure>
+
+<h2 id="terms"><span class="num">1</span>First, understand the three terms</h2>
+<p>Imagine you have:</p>
+<ul>
+  <li>A POS terminal with an <strong>NFC</strong> reader.</li>
+  <li>A phone with Google Wallet, already unlocked.</li>
+  <li>You hold the phone to the terminal.</li>
+</ul>
+<p>Three technologies carry that tap.</p>
+<div class="tbl">
+<table>
+  <thead><tr><th>Term</th><th>Meaning</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><strong>APDU</strong></td><td>Application Protocol Data Unit</td><td>The actual commands and responses</td></tr>
+    <tr><td><strong>ISO-DEP</strong></td><td>ISO 14443-4</td><td>Transports <strong>APDU</strong> messages between devices</td></tr>
+    <tr><td><strong>NFC</strong></td><td>Near Field Communication</td><td>Provides the wireless connection</td></tr>
+  </tbody>
+</table>
+</div>
+<p><strong>Think of it like this:</strong></p>
+<ul>
+  <li><strong>NFC</strong> = the wireless connection.</li>
+  <li><strong>ISO-DEP</strong> = the delivery mechanism.</li>
+  <li><strong>APDU</strong> = the actual message being delivered.</li>
+</ul>
+<p>They are different layers of the same tap. <strong>APDU</strong> sits on top. <strong>NFC</strong> is the bottom.</p>
+<div class="stack" aria-hidden="true">
+  <div class="band apdu"><b>APDU</b><span>The command, or the answer.</span></div>
+  <div class="band iso"><b>ISO-DEP</b><span>Carries that message across.</span></div>
+  <div class="band nfc"><b>NFC</b><span>The radio, a few centimetres.</span></div>
+</div>
+
+<h2 id="roles"><span class="num">2</span>Who is communicating with whom?</h2>
+<p>Two roles. The terminal starts every command. Google Wallet only answers, and it answers as a card.</p>
+<div class="pair">
+  <div class="who">POS terminal<small>reader</small></div>
+  <div class="via">command →<br>← response</div>
+  <div class="who">Google Wallet<small>the card</small></div>
+</div>
+<div class="note">
+  <p>The POS starts the <strong>APDU</strong> conversation. During the tap it cannot tell that the card is a phone.</p>
+</div>
+
+<h2 id="tap"><span class="num">3</span>What happens when you tap?</h2>
+<p>Three stages. Payment commands start only at the last one.</p>
+<div class="stages">
+  <div class="stage"><b>A · NFC</b>The terminal finds the phone and wakes it as a card.</div>
+  <div class="stage"><b>B · ISO-DEP</b>They agree how to carry longer messages.</div>
+  <div class="stage"><b>C · APDU</b>The terminal gives orders. Google Wallet answers.</div>
+</div>
+<h3>Stage A: NFC connection</h3>
+<p>The POS detects the phone and establishes a connection.</p>
+<p>Some lower-level <strong>NFC</strong> messages discover the phone and activate it. No card has been chosen yet.</p>
+<h3>Stage B: ISO-DEP activation</h3>
+<p>The POS and the phone establish <strong>ISO-DEP</strong>.</p>
+<ul>
+  <li><strong>RATS:</strong> the reader asks to activate <strong>ISO-DEP</strong>.</li>
+  <li><strong>ATS:</strong> the phone responds with its capabilities.</li>
+</ul>
+<p>Google Wallet does not see these two messages.</p>
+<h3>Stage C: APDU communication</h3>
+<p>Now the payment conversation begins.</p>
+<p>The POS sends <strong>APDU</strong> commands. Google Wallet responds.</p>
+
+<h2 id="bytes"><span class="num">4</span>What does an APDU message look like?</h2>
+<p>An <strong>APDU</strong> is basically a byte array.</p>
+<p>For example, the POS might send this SELECT command. Each slice is one part of the order:</p>
+<div class="bytes" aria-label="SELECT command split into parts">
+  <span class="b">00<small>CLA</small></span>
+  <span class="b">A4<small>SELECT</small></span>
+  <span class="b">04<small>by name</small></span>
+  <span class="b">00<small>first match</small></span>
+  <span class="b len">07<small>7 bytes follow</small></span>
+  <span class="b data">A0000000031010<small>Visa AID</small></span>
+  <span class="b">00<small>send the answer</small></span>
+</div>
+<div class="tbl">
+<table>
+  <thead><tr><th>Bytes</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>00</code></td><td>CLA – command class</td></tr>
+    <tr><td><code>A4</code></td><td>INS – instruction (SELECT)</td></tr>
+    <tr><td><code>04</code></td><td>P1 – selection method</td></tr>
+    <tr><td><code>00</code></td><td>P2 – selection options</td></tr>
+    <tr><td><code>07</code></td><td>Lc – length of following data</td></tr>
+    <tr><td><code>A0000000031010</code></td><td>AID – application identifier</td></tr>
+    <tr><td><code>00</code></td><td>Le – expected response length</td></tr>
+  </tbody>
+</table>
+</div>
+<p>In simple language, the POS is saying:</p>
+<p><strong>"Google Wallet, select the Visa application named by this AID."</strong></p>
+<p>Google Wallet processes the command and responds.</p>
+<p>For example:</p>
+<pre class="code">6F ... 90 00</pre>
+<p>Here:</p>
+<ul>
+  <li><code>6F ...</code> = application information.</li>
+  <li><code>90 00</code> = successful execution.</li>
+</ul>
+<p><code>90 00</code> is a common <strong>APDU</strong> success status.</p>
+
+<h2 id="isodep"><span class="num">5</span>What does ISO-DEP actually do?</h2>
+<p>You might wonder: why do we need <strong>ISO-DEP</strong> if we already have <strong>APDU</strong>?</p>
+<p>A reply can be hundreds of bytes. <strong>NFC</strong> can only carry a short block at a time.</p>
+<p><strong>ISO-DEP</strong> handles things such as:</p>
+<ul>
+  <li>Splitting larger messages into multiple blocks.</li>
+  <li>Reassembling received blocks.</li>
+  <li>Handling acknowledgements and retransmissions.</li>
+  <li>Managing communication flow.</li>
+</ul>
+<div class="tbl">
+<table>
+  <thead><tr><th>Block</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>I-Block</td><td>Carries actual information</td></tr>
+    <tr><td>R-Block</td><td>Acknowledgement / retransmission</td></tr>
+    <tr><td>S-Block</td><td>Control operations</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Google Wallet never sees the blocks. The phone rejoins them and hands Google Wallet one whole <strong>APDU</strong>.</p>
+
+<h2 id="talk"><span class="num">6</span>What Google Wallet and the POS say</h2>
+<p>A simplified tap looks like this. Every line is one <strong>APDU</strong>, carried by <strong>ISO-DEP</strong>.</p>
+<div class="msgs">
+  <div class="msg pos"><span class="from">POS → Google Wallet</span>SELECT PPSE. Which cards can you pay with?</div>
+  <div class="msg wallet wide"><span class="from">Google Wallet → POS</span>Visa's applications on this phone:
+    <ul>
+      <li>Visa credit/debit <code>A0000000031010</code></li>
+      <li>Visa Electron <code>A0000000032010</code></li>
+      <li>V PAY <code>A0000000032020</code></li>
+      <li>Visa Interlink <code>A0000000033010</code></li>
+    </ul>
+  </div>
+  <div class="msg pos"><span class="from">POS → Google Wallet</span>SELECT AID. Use this card.</div>
+  <div class="msg wallet"><span class="from">Google Wallet → POS</span>That card is selected.</div>
+  <div class="msg pos"><span class="from">POS → Google Wallet</span>GPO. How do I process this sale?</div>
+  <div class="msg wallet"><span class="from">Google Wallet → POS</span>Read these records. Here is what I support.</div>
+  <div class="msg pos"><span class="from">POS → Google Wallet</span>READ RECORD.</div>
+  <div class="msg wallet"><span class="from">Google Wallet → POS</span>The card data.</div>
+  <div class="msg pos"><span class="from">POS → Google Wallet</span>GENERATE AC. Build a cryptogram.</div>
+  <div class="msg wallet"><span class="from">Google Wallet → POS</span>A one-time proof. Not an approval yet.</div>
+</div>
+<p>The exact sequence depends on the card network. The number in the card data is usually a token: a stand-in for the real card, issued for this phone. The printed number does not cross the radio.</p>
+<p>The cryptogram is not an approval. The terminal still has to ask the bank. That second conversation is not <strong>NFC</strong>.</p>
+<div class="hops">
+  <div class="who">Google Wallet<small>the phone</small></div>
+  <div class="via"><strong>APDU</strong><br>over <strong>NFC</strong></div>
+  <div class="who">POS<small>terminal</small></div>
+  <div class="via"><a href="../language-of-payment-systems-iso8583/iso8583-article.html">ISO 8583</a><br>to the bank</div>
+  <div class="who">Bank</div>
+</div>
+<div class="note ok">
+  <p><strong>Four names.</strong></p>
+  <ol>
+    <li><strong>NFC</strong> is the radio.</li>
+    <li><strong>ISO-DEP</strong> transports the <strong>APDUs</strong>.</li>
+    <li><strong>APDU</strong> is the command.</li>
+    <li><strong>EMV</strong> is the script of this tap. ISO 8583 is the script of the message the terminal sends next.</li>
+  </ol>
+</div>
+<h2 id="lessons">Let's start the lessons</h2>
+<p>Three commands. Each one is a single <strong>APDU</strong>. The terminal sends it. Google Wallet answers.</p>
+
+<h2 id="ppse">Lesson 1: SELECT PPSE</h2>
+<p>First, what is PPSE?</p>
+<p><strong>PPSE = Proximity Payment System Environment</strong></p>
+<p>Think of PPSE as the menu of cards in Google Wallet.</p>
+<p>For example, Google Wallet might offer these Visa applications. A phone returns only the ones actually in the wallet. <code>A0000000031010</code> is the usual Visa tap.</p>
+<ul>
+  <li>Visa credit/debit <code>A0000000031010</code></li>
+  <li>Visa Electron <code>A0000000032010</code></li>
+  <li>V PAY <code>A0000000032020</code></li>
+  <li>Visa Interlink <code>A0000000033010</code></li>
+</ul>
+<p>When you tap, the POS does not yet know which card Google Wallet will offer.</p>
+<p>So it asks:</p>
+<p><strong>"Which cards can you pay with?"</strong></p>
+
+<h3>Step 1: POS sends SELECT PPSE</h3>
+<p>The POS sends this <strong>APDU</strong>. The long slice is a name, not a card number:</p>
+<div class="bytes" aria-label="SELECT PPSE split into parts">
+  <span class="b">00 A4 04 00<small>SELECT by name</small></span>
+  <span class="b len">0E<small>14 bytes</small></span>
+  <span class="b data">2PAY.SYS.DDF01<small>the PPSE name</small></span>
+  <span class="b">00<small>send the answer</small></span>
+</div>
+<pre class="code">00 A4 04 00 0E 325041592E5359532E4444463031 00</pre>
+<div class="tbl">
+<table>
+  <thead><tr><th>Part</th><th>Value</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td>CLA</td><td><code>00</code></td><td>Command class</td></tr>
+    <tr><td>INS</td><td><code>A4</code></td><td>SELECT instruction</td></tr>
+    <tr><td>P1</td><td><code>04</code></td><td>Select by name</td></tr>
+    <tr><td>P2</td><td><code>00</code></td><td>Selection options</td></tr>
+    <tr><td>Lc</td><td><code>0E</code></td><td>14 bytes of data</td></tr>
+    <tr><td>Data</td><td><code>325041592E5359532E4444463031</code></td><td>PPSE name</td></tr>
+    <tr><td>Le</td><td><code>00</code></td><td>Expected response length</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The PPSE name in ASCII is:</p>
+<pre class="code">2PAY.SYS.DDF01</pre>
+
+<h3>Step 2: Google Wallet responds</h3>
+<p>Google Wallet returns an FCI (File Control Information): the cards it can pay with. If you already picked a card in the app, that card is first.</p>
+<p>Simplified example:</p>
+<pre class="code">6F
+  84 0E 325041592E5359532E4444463031
+  A5
+    BF0C
+      61
+        4F 07 A0000000031010
+        50 04 VISA
+      61
+        4F 07 A0000000032010
+        50 08 ELECTRON
+90 00</pre>
+<p>Don't worry about understanding every byte yet. V PAY is <code>A0000000032020</code> and Visa Interlink is <code>A0000000033010</code>. Same shape, different AID.</p>
+<div class="tbl">
+<table>
+  <thead><tr><th>Tag</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>6F</code></td><td>FCI template</td></tr>
+    <tr><td><code>84</code></td><td>DF Name (PPSE name)</td></tr>
+    <tr><td><code>A5</code></td><td>FCI proprietary information</td></tr>
+    <tr><td><code>BF0C</code></td><td>Issuer discretionary data</td></tr>
+    <tr><td><code>61</code></td><td>Application template</td></tr>
+    <tr><td><code>4F</code></td><td>AID</td></tr>
+    <tr><td><code>50</code></td><td>Application label</td></tr>
+    <tr><td><code>90 00</code></td><td>Success</td></tr>
+  </tbody>
+</table>
+</div>
+<p><strong>What did we achieve?</strong></p>
+<p>The POS now knows which of Visa's applications Google Wallet can pay with. It has not chosen one. The usual choice is <code>A0000000031010</code>.</p>
+
+<h2 id="aid">Lesson 2: SELECT AID</h2>
+<p>Now the POS must choose one application.</p>
+<p>For example, it chooses Visa.</p>
+<p>It sends:</p>
+<pre class="code">00 A4 04 00 07 A0000000031010 00</pre>
+<p>Here:</p>
+<pre class="code">A0000000031010</pre>
+<p>is the Visa AID.</p>
+<p>Google Wallet receives this <strong>APDU</strong> and selects that card.</p>
+<p>It responds with its application information (FCI).</p>
+<p>For example:</p>
+<pre class="code">6F ... 90 00</pre>
+<p>The actual response contains application-specific data.</p>
+<p><strong>What did we achieve?</strong></p>
+<p>The POS has selected the Visa card inside Google Wallet. Google Wallet did not choose it. The POS did, from the list it was just given.</p>
+
+<h2 id="gpo">Lesson 3: GPO</h2>
+<p>Now things get interesting.</p>
+<p>GPO = Get Processing Options.</p>
+<p>The POS asks the selected payment application:</p>
+<p><strong>"Tell me how to process this transaction. Which records should I read, and what processing capabilities do you have?"</strong></p>
+<p>The POS sends:</p>
+<pre class="code">80 A8 00 00 02 83 00 00</pre>
+<div class="tbl">
+<table>
+  <thead><tr><th>Part</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><code>80</code></td><td>CLA</td></tr>
+    <tr><td><code>A8</code></td><td>GPO instruction</td></tr>
+    <tr><td><code>00</code></td><td>P1</td></tr>
+    <tr><td><code>00</code></td><td>P2</td></tr>
+    <tr><td><code>02</code></td><td>Data length</td></tr>
+    <tr><td><code>83</code></td><td>Command template</td></tr>
+    <tr><td><code>00</code></td><td>Empty PDOL data</td></tr>
+    <tr><td><code>00</code></td><td>Expected response length</td></tr>
+  </tbody>
+</table>
+</div>
+<p>This is a simplified example where the application has no PDOL requirements.</p>
+<p>In a real tap, Google Wallet can ask for transaction information through PDOL, such as:</p>
+<ul>
+  <li>Amount</li>
+  <li>Transaction currency</li>
+  <li>Transaction date</li>
+  <li>Terminal country</li>
+  <li>Transaction type</li>
+</ul>
+<p>The POS supplies those values in the GPO command.</p>
+<p>Google Wallet responds with information such as:</p>
+<ul>
+  <li>AIP (Application Interchange Profile)</li>
+  <li>AFL (Application File Locator)</li>
+</ul>
+<p>These tell the POS what the application supports and which records to read.</p>
+
+<h2 id="where">Let's understand where we are</h2>
+<div class="msgs">
+  <div class="msg pos"><span class="from">POS</span>SELECT PPSE</div>
+  <div class="msg wallet"><span class="from">Google Wallet</span>The cards it can pay with</div>
+  <div class="msg pos"><span class="from">POS</span>SELECT Visa</div>
+  <div class="msg wallet"><span class="from">Google Wallet</span>That card's details</div>
+  <div class="msg pos"><span class="from">POS</span>GPO</div>
+  <div class="msg wallet"><span class="from">Google Wallet</span>AIP and AFL. What to read next.</div>
+</div>
+<p>No payment cryptogram yet. That comes later.</p>
+<p>Three questions. Pick one answer. You can change it.</p>
+<div class="quiz">
+  <fieldset>
+    <legend>Why does the POS send SELECT PPSE before SELECT AID?</legend>
+    <button type="button">SELECT AID only works on a plastic card.</button>
+    <button type="button" data-ok data-why="The terminal has not seen the list yet. SELECT PPSE asks which cards are in the wallet.">It does not know which cards are in the wallet yet.</button>
+    <button type="button">PPSE is the payment cryptogram.</button>
+    <p class="say" hidden></p>
+  </fieldset>
+  <fieldset>
+    <legend>Who chooses the Visa card?</legend>
+    <button type="button">Google Wallet chooses its favourite card.</button>
+    <button type="button" data-ok data-why="Google Wallet only offers the list. The POS picks one AID from it.">The POS, from the list it was just given.</button>
+    <button type="button">The bank chooses during the tap.</button>
+    <p class="say" hidden></p>
+  </fieldset>
+  <fieldset>
+    <legend>Does GPO generate the payment cryptogram?</legend>
+    <button type="button">Yes. GPO is the cryptogram.</button>
+    <button type="button" data-ok data-why="GPO only returns AIP and AFL. GENERATE AC is where Google Wallet builds the cryptogram.">No. That comes later, in GENERATE AC.</button>
+    <button type="button">The bank sends the cryptogram back over NFC.</button>
+    <p class="say" hidden></p>
+  </fieldset>
+</div>
+<p>The next commands are <strong>READ RECORD</strong> and <strong>GENERATE AC</strong>. READ RECORD is where the token and the expiry come from. GENERATE AC is where Google Wallet builds the cryptogram.</p>
+
+<footer>
+  <span>© <span id="year"></span> Md. Sayeed Rahman</span>
+</footer>
+</article>
+<script>
+document.getElementById("year").textContent = new Date().getFullYear();
+document.querySelectorAll(".quiz fieldset").forEach(function (fs) {
+  var say = fs.querySelector(".say");
+  var right = fs.querySelector("[data-ok]");
+  if (!right) throw new Error("quiz");
+  fs.querySelectorAll("button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      fs.querySelectorAll("button").forEach(function (b) {
+        b.classList.remove("right", "wrong");
+        b.setAttribute("aria-pressed", "false");
+      });
+      btn.classList.add(btn === right ? "right" : "wrong");
+      if (btn !== right) right.classList.add("right");
+      btn.setAttribute("aria-pressed", "true");
+      say.hidden = false;
+      say.textContent = right.dataset.why;
+    });
+  });
+});
+</script>
+</body>
+</html>

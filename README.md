@@ -22,6 +22,7 @@ Visual, hands-on posts you can play with while you learn. Each link opens the ar
 ### Payment systems
 
 - [Language of payment systems: ISO 8583 protocol](https://sayeed1999.github.io/blog/language-of-payment-systems-iso8583/iso8583-article.html)
+- [How Google Wallet talks over NFC to POS devices](https://sayeed1999.github.io/blog/how-google-wallet-talks-nfc/)
 - [The 12-digit rule behind 100 million unique payment references a day](https://sayeed1999.github.io/blog/rrn-generation/)
 - [Why is PIN encrypted before it travels through the network?](https://sayeed1999.github.io/blog/encrypt-pin-before-it-travels/guarding-the-pin.html)
 
